@@ -3,9 +3,12 @@
 #include <cstring>
 #include <list>
 #include <iostream>
+#include <stdio.h>
+#include <cstdlib>
+#include <string>
+#include <vector>
 
 using namespace std;
-
 namespace dev
 {
 namespace crypto
@@ -87,7 +90,7 @@ SDFCryptoProvider& SDFCryptoProvider::GetInstance()
 }
 
 unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
-    char const* digest, unsigned int const digestLen, char* signature,
+    unsigned char const* digest, unsigned int const digestLen, unsigned char* signature,
     unsigned int* signatureLen)
 {
     switch (algorithm)
@@ -95,11 +98,22 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
     case SM2:
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        ECCrefPrivateKey eccKey;
-        eccKey.bits = 32 * 8;
-        memcpy(eccKey.D, key.PrivateKey(), 32);
-        SGD_RV signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey,
+        SGD_RV signCode;
+        if (key.IsInternalKey()){
+            SGD_RV getAccessRightCode = SDF_GetPrivateKeyAccessRight(sessionHandle, key.Identifier(), (unsigned char *) key.Password(), (unsigned int)strlen(key.Password()));
+            if (getAccessRightCode != SDR_OK){
+                m_sessionPool->ReturnSession(sessionHandle);
+                return signCode;
+            }
+            signCode = SDF_InternalSign_ECC(sessionHandle, key.Identifier(),(SGD_UCHAR*)digest, digestLen, (ECCSignature*)signature);
+            SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.Identifier());
+        } else{
+            ECCrefPrivateKey eccKey;
+            eccKey.bits = 32 * 8;
+            memcpy(eccKey.D, key.PrivateKey(), 32);
+            signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey,
             (SGD_UCHAR*)digest, digestLen, (ECCSignature*)signature);
+        }
         if (signCode != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -131,11 +145,11 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
-        std::basic_string<unsigned char> pk_x = pk.x;
-        std::basic_string<unsigned char> pk_y = pk.y;
-        std::basic_string<unsigned char> pk_xy = pk_x + pk_y;
-        key->setPrivateKey((char*)sk.D, sk.bits / 8);
-        key->setPublicKey((char*)pk_xy.c_str(), pk.bits / 4);
+        unsigned char pk_xy[64];
+        memcpy(pk_xy,pk.x,32);
+        memcpy(pk_xy+32,pk.y,32);
+        key->setPrivateKey(sk.D, 32);
+        key->setPublicKey(pk_xy, 64);
         m_sessionPool->ReturnSession(sessionHandle);
         return SDR_OK;
     }
@@ -144,8 +158,8 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     }
 }
 
-unsigned int SDFCryptoProvider::Hash(Key*, AlgorithmType algorithm, char const* message,
-    unsigned int const messageLen, char* digest, unsigned int* digestLen)
+unsigned int SDFCryptoProvider::Hash(Key*, AlgorithmType algorithm, unsigned char const* message,
+    unsigned int const messageLen, unsigned char* digest, unsigned int* digestLen)
 {
     switch (algorithm)
     {
@@ -166,7 +180,7 @@ unsigned int SDFCryptoProvider::Hash(Key*, AlgorithmType algorithm, char const* 
             return code;
         }
 
-        code = SDF_HashFinal(sessionHandle, (SGD_UCHAR*)digest, digestLen);
+        code = SDF_HashFinal(sessionHandle, digest, digestLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -179,9 +193,9 @@ unsigned int SDFCryptoProvider::Hash(Key*, AlgorithmType algorithm, char const* 
         return SDR_ALGNOTSUPPORT;
     }
 }
-unsigned int SDFCryptoProvider::HashWithZ(Key*, AlgorithmType algorithm, char const* zValue,
-    unsigned int const zValueLen, char const* message, unsigned int const messageLen,
-    char* digest, unsigned int* digestLen)
+unsigned int SDFCryptoProvider::HashWithZ(Key*, AlgorithmType algorithm, unsigned char const* zValue,
+    unsigned int const zValueLen, unsigned char const* message, unsigned int const messageLen,
+    unsigned char* digest, unsigned int* digestLen)
 {
     switch (algorithm)
     {
@@ -208,7 +222,7 @@ unsigned int SDFCryptoProvider::HashWithZ(Key*, AlgorithmType algorithm, char co
             return code;
         }
 
-        code = SDF_HashFinal(sessionHandle, (SGD_UCHAR*)digest, digestLen);
+        code = SDF_HashFinal(sessionHandle, digest, digestLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -223,7 +237,7 @@ unsigned int SDFCryptoProvider::HashWithZ(Key*, AlgorithmType algorithm, char co
 }
 
 unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
-    char const* digest, unsigned int const digestLen, char const* signature,
+    unsigned char const* digest, unsigned int const digestLen, unsigned char const* signature,
     const unsigned int signatureLen, bool* result)
 {
     switch (algorithm)
@@ -235,15 +249,21 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
             return SDR_NOTSUPPORT;
         }
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        ECCrefPublicKey eccKey;
-        eccKey.bits = 32 * 8;
-        memcpy(eccKey.x, key.PublicKey(), 32);
-        memcpy(eccKey.y, key.PublicKey() + 32, 32);
         ECCSignature eccSignature;
         memcpy(eccSignature.r, signature, 32);
         memcpy(eccSignature.s, signature + 32, 32);
-        SGD_RV code = SDF_ExternalVerify_ECC(
+        SGD_RV code;
+
+        if (key.IsInternalKey()){
+            code = SDF_InternalVerify_ECC(sessionHandle, key.Identifier(), (SGD_UCHAR*)digest, digestLen, &eccSignature);
+        } else{
+            ECCrefPublicKey eccKey;
+            eccKey.bits = 32 * 8;
+            memcpy(eccKey.x, key.PublicKey(), 32);
+            memcpy(eccKey.y, key.PublicKey() + 32, 32);
+            code = SDF_ExternalVerify_ECC(
             sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest, digestLen, &eccSignature);
+        }
         if (code == SDR_OK)
         {
             *result = true;
@@ -265,51 +285,290 @@ char * SDFCryptoProvider::GetErrorMessage(unsigned int code)
     switch (code)
     {
     case SDR_OK:
-        return "success";
+        return (char *)"success";
     case SDR_UNKNOWERR:
-        return "unknown error";
+        return (char *)"unknown error";
     case SDR_NOTSUPPORT:
-        return "not support";
+        return (char *)"not support";
     case SDR_COMMFAIL:
-        return "communication failed";
+        return (char *)"communication failed";
     case SDR_OPENDEVICE:
-        return "failed open device";
+        return (char *)"failed open device";
     case SDR_OPENSESSION:
-        return "failed open session";
+        return (char *)"failed open session";
     case SDR_PARDENY:
-        return "permission deny";
+        return (char *)"permission deny";
     case SDR_KEYNOTEXIST:
-        return "key not exit";
+        return (char *)"key not exit";
     case SDR_ALGNOTSUPPORT:
-        return "algorithm not support";
+        return (char *)"algorithm not support";
     case SDR_ALGMODNOTSUPPORT:
-        return "algorithm not support mode";
+        return (char *)"algorithm not support mode";
     case SDR_PKOPERR:
-        return "public key calculate error";
+        return (char *)"public key calculate error";
     case SDR_SKOPERR:
-        return "private key calculate error";
+        return (char *)"private key calculate error";
     case SDR_SIGNERR:
-        return "signature error";
+        return (char *)"signature error";
     case SDR_VERIFYERR:
-        return "verify signature error";
+        return (char *)"verify signature error";
     case SDR_SYMOPERR:
-        return "symmetric crypto calculate error";
+        return (char *)"symmetric crypto calculate error";
     case SDR_STEPERR:
-        return "step error";
+        return (char *)"step error";
     case SDR_FILESIZEERR:
-        return "file size error";
+        return (char *)"file size error";
     case SDR_FILENOEXIST:
-        return "file not exist";
+        return (char *)"file not exist";
     case SDR_FILEOFSERR:
-        return "file offset error";
+        return (char *)"file offset error";
     case SDR_KEYTYPEERR:
-        return "key type not right";
+        return (char *)"key type not right";
     case SDR_KEYERR:
-        return "key error";
+        return (char *)"key error";
     default:
-        string err = "unkown code " + std::to_string(code);
-        return (char *)err.c_str();
+	std::string err = "unkown code " + std::to_string(code);
+	char * c_err = new char[err.length()+1];
+	strcpy(c_err,err.c_str());
+	return c_err;
     }
+}
+
+SDFCryptoResult KeyGen(AlgorithmType algorithm){
+    try{
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        Key key=Key();
+        unsigned int code = provider.KeyGen(algorithm,&key);
+        if (code != SDR_OK){
+            return makeResult(nullptr,nullptr,nullptr,false,nullptr,code,nullptr);
+        }else{
+            return makeResult(nullptr,toHex(key.PublicKey(),key.PublicKeyLen()),toHex(key.PrivateKey(),key.PrivateKeyLen()),false,nullptr,code,nullptr);
+        } 
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }
+}
+SDFCryptoResult Sign(char * privateKey, AlgorithmType algorithm, char const* digest){
+    try{
+        Key key = Key();
+        key.setPrivateKey(fromHex(privateKey).data(),32);
+        SearchData(fromHex(privateKey).data(),32,16);
+        SearchData(fromHex((char *)digest).data(),32,16);
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        unsigned char * signature = (unsigned char *)malloc(64*sizeof(char));
+        unsigned int len;
+        unsigned int code = provider.Sign(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),signature,&len);
+        if (code != SDR_OK){
+            return makeResult(nullptr,nullptr,nullptr,false,nullptr,code,nullptr);
+        }else{
+            return makeResult(toHex(signature,len),nullptr,nullptr,false,nullptr,code,nullptr);
+        } 
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }    
+}
+SDFCryptoResult SignWithInnerKey(unsigned int keyIndex, char * password, AlgorithmType algorithm, char const* digest){
+   try{
+        Key key = Key(keyIndex,password);
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        unsigned char * signature = (unsigned char *)malloc(64*sizeof(char));
+        unsigned int len;
+        unsigned int code = provider.Sign(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),signature,&len);
+        if (code != SDR_OK){
+            return makeResult(nullptr,nullptr,nullptr,false,nullptr,code,nullptr);
+        }else{
+            return makeResult(toHex(signature,len),nullptr,nullptr,false,nullptr,code,nullptr);
+        } 
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }  
+}
+SDFCryptoResult Verify(char * publicKey, AlgorithmType algorithm, char const* digest, char const* signature){
+    try{
+        Key key = Key();
+        key.setPublicKey(fromHex(publicKey).data(),64);
+        SearchData(fromHex(publicKey).data(),64,16);
+        SearchData(fromHex((char *)signature).data(),64,16);
+        SearchData(fromHex((char *)digest).data(),32,16);
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        bool isValid;
+        unsigned int code = provider.Verify(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),fromHex((char *)signature).data(),getHexByteLen((char*)signature),&isValid);
+        return makeResult(nullptr,nullptr,nullptr,isValid,nullptr,code,nullptr);
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }   
+}
+
+SDFCryptoResult VerifyWithInnerKey(unsigned int keyIndex, AlgorithmType algorithm, char const* digest,char const* signature){
+    try{
+        Key key = Key(keyIndex);
+        SearchData(fromHex((char *)signature).data(),64,16);
+        SearchData(fromHex((char *)digest).data(),32,16);
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        bool isValid;
+        unsigned int code = provider.Verify(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),fromHex((char *)signature).data(),getHexByteLen((char*)signature),&isValid);
+        return makeResult(nullptr,nullptr,nullptr,isValid,nullptr,code,nullptr);
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }
+}
+
+SDFCryptoResult Hash(char * publicKey, AlgorithmType algorithm, char const* message){
+    try{
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        bool isValid;
+        unsigned char hashResult[32];
+        unsigned int len;
+        unsigned int code = provider.Hash(nullptr,algorithm,fromHex((char *)message).data(),getHexByteLen((char *)message),hashResult,&len);
+        return makeResult(nullptr,nullptr,nullptr,false,toHex(hashResult,32),code,nullptr);
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }   
+    
+}
+
+
+
+SDFCryptoResult HashWithZ(char * key, AlgorithmType algorithm, char const* message){
+    try{
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        bool isValid;
+        unsigned char hashResult[32];
+        unsigned int len;
+        unsigned int code = provider.Hash(nullptr,algorithm,fromHex((char *)message).data(),getHexByteLen((char *)message),hashResult,&len);
+        return makeResult(nullptr,nullptr,nullptr,false,toHex(hashResult,32),code,nullptr);
+    }catch(const char* e){
+        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
+    }
+}
+
+SDFCryptoResult makeResult(char * signature,char * publicKey,char * privateKey,bool result,char * hash,unsigned int code,char* msg){
+    SDFCryptoResult cryptoResult;
+    cryptoResult.signature = signature;
+    cryptoResult.publicKey = publicKey;
+    cryptoResult.privateKey = privateKey;
+    cryptoResult.result = result;
+    cryptoResult.hash = hash;
+    if(code != SDR_OK){
+        cryptoResult.sdfErrorMessage = SDFCryptoProvider::GetErrorMessage(code);
+    }else{
+        cryptoResult.sdfErrorMessage = nullptr;
+    }
+    if (msg != nullptr){
+        cryptoResult.sdfErrorMessage = msg;
+    }
+    return cryptoResult;
+}
+char* toHex(unsigned char *data, int len)
+{
+    static char const* hexdigits = "0123456789abcdef";
+    std::string hex(len * 2, '0');
+    int position = 0;
+    for (int i = 0; i < len; i++)
+    {
+        hex[position++] = hexdigits[(data[i] >> 4) & 0x0f];
+        hex[position++] = hexdigits[data[i] & 0x0f];
+    }
+    char * c_hex = new char[len * 2 +1];
+    strcpy(c_hex,hex.c_str());
+    return c_hex;
+}
+
+std::vector<uint8_t> fromHex(char * hexString){
+    size_t len = strlen(hexString);
+    unsigned s = (len>= 2 && hexString[0] == '0' && hexString[1] == 'x') ? 2 : 0;
+    std::vector<uint8_t> ret;
+    ret.reserve((len - s + 1) / 2);
+    if(len%2){
+        int h = fromHexChar(hexString[s++]);
+        if (h != -1)
+            ret.push_back(h);
+        else
+            throw "bad hex string";
+    }
+    for (unsigned i = s; i < len; i += 2)
+    {
+        int h = fromHexChar(hexString[i]);
+        int l = fromHexChar(hexString[i + 1]);
+
+        if (h != -1 && l != -1){
+            ret.push_back((uint8_t)(h * 16 + l));
+        }else{
+            throw "bad hex string";
+        }  
+    }
+    return ret;
+}
+
+unsigned int getHexByteLen(char * hexString){
+    size_t len = strlen(hexString);
+    unsigned s = (len>= 2 && hexString[0] == '0' && hexString[1] == 'x') ? 2 : 0;
+    return (len - s + 1) / 2;
+}
+
+int fromHexChar(char _i)
+{
+    if (_i >= '0' && _i <= '9')
+        return _i - '0';
+    if (_i >= 'a' && _i <= 'f')
+        return _i - 'a' + 10;
+    if (_i >= 'A' && _i <= 'F')
+        return _i - 'A' + 10;
+    return -1;
+}
+
+int PrintData(char *itemName, unsigned char *sourceData, unsigned int dataLength, unsigned int rowCount)
+{
+	int i, j;
+	
+	if((sourceData == NULL) || (rowCount == 0) || (dataLength == 0))
+		return -1;
+	
+	if(itemName != NULL)
+		printf("%s[%d]:\n", itemName, dataLength);
+	
+	for(i=0; i<(int)(dataLength/rowCount); i++)
+	{
+		printf("%08x  ",i * rowCount);
+
+		for(j=0; j<(int)rowCount; j++)
+		{
+			printf("%02x ", *(sourceData + i*rowCount + j));
+		}
+
+		printf("\n");
+	}
+
+	if (!(dataLength % rowCount))
+		return 0;
+	
+	printf("%08x  ", (dataLength/rowCount) * rowCount);
+
+	for(j=0; j<(int)(dataLength%rowCount); j++)
+	{
+		printf("%02x ",*(sourceData + (dataLength/rowCount)*rowCount + j));
+	}
+
+	printf("\n");
+
+	return 0;
+}
+
+int SearchData(unsigned char *sourceData, unsigned int dataLength, unsigned int rowCount)
+{
+	int i, j;
+	
+	if((sourceData == NULL) || (rowCount == 0) || (dataLength == 0))
+		return -1;
+	for(i=0; i<(int)(dataLength/rowCount); i++)
+	{
+		i * rowCount;
+		for(j=0; j<(int)rowCount; j++)
+		{
+			*(sourceData + i*rowCount + j);
+		}
+	}
+	return 0;
 }
 
 }  // namespace crypto

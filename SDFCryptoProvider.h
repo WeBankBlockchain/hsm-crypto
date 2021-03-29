@@ -20,7 +20,12 @@
  */
 #pragma once
 #include "libsdf/swsds.h"
-
+#include <stdio.h>
+#include <cstdlib>
+#include <list>
+#include <string>
+#include <cstring>
+#include <vector>
 using namespace std;
 namespace dev
 {
@@ -33,41 +38,56 @@ enum AlgorithmType : uint32_t
     SM3 = 0x00000001,      // SGD_SM3
     SM4_CBC = 0x00002002,  // SGD_SM4_CBC
 };
-
 class Key
 {
 public:
-    char* PublicKey() const { return m_publicKey; }
-    char* PrivateKey() const { return m_privateKey; }
+    unsigned char * PublicKey() const { return m_publicKey; }
+    unsigned char * PrivateKey() const { return m_privateKey; }
+    int PublicKeyLen() const { return m_publicKeyLen; }
+    int PrivateKeyLen() const { return m_privateKeyLen; }
+    unsigned int Identifier() const { return m_keyIndex; };
+    char * Password() const { return m_keyPassword; };
+    bool IsInternalKey() const { return m_isInternalKey; }
     Key(void){};
-    Key(char* privateKey, char* publicKey)
+    Key(unsigned char* privateKey,int privateKeyLen, unsigned char* publicKey, int publicKeyLen)
     {
         m_privateKey = privateKey;
+        m_privateKeyLen = privateKeyLen;
         m_publicKey = publicKey;
+        m_publicKeyLen = publicKeyLen;
     };
     Key(const unsigned int keyIndex, char *& password)
     {
         m_keyIndex = keyIndex;
         m_keyPassword = password;
+        m_isInternalKey = true;
     };
-    unsigned int Identifier() { return m_keyIndex; };
-    char * Password() { return m_keyPassword; };
-    void setPrivateKey(char* privateKey, unsigned int len)
+    Key(const unsigned int keyIndex)
     {
-        m_privateKey = (char*)malloc(len * sizeof(char));
-        strncpy((char*)m_privateKey, (char*)privateKey, len);
+        m_keyIndex = keyIndex;
+        m_isInternalKey = true;
     };
-    void setPublicKey(char* publicKey, unsigned int len)
+    void setPrivateKey(unsigned char* privateKey, unsigned int len)
     {
-        m_publicKey = (char*)malloc(len * sizeof(char));
-        strncpy((char*)m_publicKey, (char*)publicKey, len);
+        m_privateKey = (unsigned char*)malloc(len * sizeof(char));
+        memcpy(m_privateKey, privateKey, len);
+        m_privateKeyLen = len;
+    };
+    void setPublicKey(unsigned char* publicKey, unsigned int len)
+    {
+        m_publicKey = (unsigned char*)malloc(len * sizeof(char));
+        memcpy(m_publicKey, publicKey, len);
+        m_publicKeyLen = len;
     };
 
 private:
     unsigned int m_keyIndex;
     char * m_keyPassword;
-    char* m_privateKey;
-    char* m_publicKey;
+    unsigned char * m_privateKey;
+    unsigned char * m_publicKey;
+    int m_privateKeyLen;
+    int m_publicKeyLen;
+    bool m_isInternalKey = false;
 };
 
 class SessionPool
@@ -115,63 +135,68 @@ public:
     /**
      * Sign
      */
-    unsigned int Sign(Key const& key, AlgorithmType algorithm, char const* digest,
-        unsigned int const digestLen, char* signature, unsigned int* signatureLen);
+    unsigned int Sign(Key const& key, AlgorithmType algorithm, unsigned char const* digest,
+        unsigned int const digestLen, unsigned char* signature, unsigned int* signatureLen);
 
     /**
      * Verify signature
      */
-    unsigned int Verify(Key const& key, AlgorithmType algorithm, char const* digest,
-        unsigned int const digestLen, char const* signature,
+    unsigned int Verify(Key const& key, AlgorithmType algorithm, unsigned char const* digest,
+        unsigned int const digestLen, unsigned char const* signature,
         unsigned int const signatureLen, bool* result);
 
     /**
      * Make hash
      */
-    unsigned int Hash(Key* key, AlgorithmType algorithm, char const* message,
-        unsigned int const messageLen, char* digest, unsigned int* digestLen);
+    unsigned int Hash(Key* key, AlgorithmType algorithm, unsigned char const* message,
+        unsigned int const messageLen, unsigned char*  digest, unsigned int* digestLen);
 
     /**
      * Encrypt
      */
-    unsigned int Encrypt(Key const& key, AlgorithmType algorithm, char const* plantext,
-        unsigned int const plantextLen, char* cyphertext, unsigned int* cyphertextLen);
+    unsigned int Encrypt(Key const& key, AlgorithmType algorithm, unsigned char const* plantext,
+        unsigned int const plantextLen, unsigned char* cyphertext, unsigned int* cyphertextLen);
 
     /**
      * Decrypt
      */
-    unsigned int Decrypt(Key const& key, AlgorithmType algorithm, char const* cyphertext,
-        unsigned int const cyphertextLen, char* plantext, unsigned int* plantextLen);
+    unsigned int Decrypt(Key const& key, AlgorithmType algorithm, unsigned char const* cyphertext,
+        unsigned int const cyphertextLen, unsigned char* plantext, unsigned int* plantextLen);
 
     /**
      * Make sm3 hash with z value
      */
-    unsigned int HashWithZ(Key* key, AlgorithmType algorithm, char const* zValue,
-        unsigned int const zValueLen, char const* message, unsigned int const messageLen,
-        char* digest, unsigned int* digestLen);
+    unsigned int HashWithZ(Key* key, AlgorithmType algorithm, unsigned char const* zValue,
+        unsigned int const zValueLen, unsigned char const* message, unsigned int const messageLen,
+        unsigned char* digest, unsigned int* digestLen);
 
     static char * GetErrorMessage(unsigned int code);
 };
 
-class TypeHelper{
-    unsigned int * NewUintPointer(){
-        unsigned int i;
-        return &i;
-    }
-
-    unsigned int GetUintValue(unsigned int * data){
-        return *data;
-    }
-
-    bool* NewBoolPointer(){
-        bool i;
-        return &i;
-    }
-
-    bool GetBoolValue(bool * data){
-        return *data;
-    }
+struct SDFCryptoResult{
+    char * signature;
+    char * publicKey;
+    char * privateKey;
+    bool result;
+    char * hash;
+    char * sdfErrorMessage;
 };
 
+SDFCryptoResult KeyGen(AlgorithmType algorithm);
+SDFCryptoResult Sign(char * privateKey, AlgorithmType algorithm, char const* digest);
+SDFCryptoResult SignWithInnerKey(unsigned int keyIndex, char * password, AlgorithmType algorithm, char const* digest);
+SDFCryptoResult Verify(char * publicKey, AlgorithmType algorithm, char const* digest, char const* signature);
+SDFCryptoResult VerifyWithInnerKey(unsigned int keyIndex, AlgorithmType algorithm, char const* digest,char const* signature);
+SDFCryptoResult Hash(char * key, AlgorithmType algorithm, char const* message);
+
+
+SDFCryptoResult HashWithZ(char * key, AlgorithmType algorithm, char const* message);
+SDFCryptoResult makeResult(char * signature,char * publicKey,char * privateKey,bool result,char * hash,unsigned int code,char*);
+char * toHex(unsigned char *data, int len);
+std::vector<uint8_t> fromHex(char * hexString);
+int fromHexChar(char _i);
+unsigned int getHexByteLen(char * hexString);
+int PrintData(char*,unsigned char*,unsigned int, unsigned int);
+int SearchData(unsigned char *, unsigned int , unsigned int);
 }  // namespace crypto
 }  // namespace dev

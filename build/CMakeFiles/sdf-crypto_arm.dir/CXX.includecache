@@ -1,0 +1,42 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/webank/fisco/sdf-crypto-cplus/SDFCryptoProvider.cpp
+SDFCryptoProvider.h
+/home/webank/fisco/sdf-crypto-cplus/SDFCryptoProvider.h
+libsdf/swsds.h
+/home/webank/fisco/sdf-crypto-cplus/libsdf/swsds.h
+cstring
+-
+list
+-
+iostream
+-
+stdio.h
+-
+cstdlib
+-
+string
+-
+
+/home/webank/fisco/sdf-crypto-cplus/SDFCryptoProvider.h
+libsdf/swsds.h
+/home/webank/fisco/sdf-crypto-cplus/libsdf/swsds.h
+stdio.h
+-
+cstdlib
+-
+list
+-
+string
+-
+cstring
+-
+
+/home/webank/fisco/sdf-crypto-cplus/libsdf/swsds.h
+
