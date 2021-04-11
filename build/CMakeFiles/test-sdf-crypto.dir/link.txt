@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/test-sdf-crypto.dir/TestSDF.cpp.o  -o test-sdf-crypto  -L/home/webank/fisco/sdf-crypto-cplus/libsdf/libswsds -Wl,-rpath,/home/webank/fisco/sdf-crypto-cplus/libsdf/libswsds:/home/webank/fisco/sdf-crypto-cplus/build -lswsds libsdf-crypto_arm.so -lswsds 

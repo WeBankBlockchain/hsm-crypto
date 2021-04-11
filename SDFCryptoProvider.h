@@ -170,6 +170,11 @@ public:
         unsigned int const zValueLen, unsigned char const* message, unsigned int const messageLen,
         unsigned char* digest, unsigned int* digestLen);
 
+    /**
+     *  Get public key of an internal key
+     */
+    unsigned int ExportInternalPublicKey(Key &key, AlgorithmType algorithm);
+
     static char * GetErrorMessage(unsigned int code);
 };
 
@@ -184,11 +189,17 @@ struct SDFCryptoResult{
 
 SDFCryptoResult KeyGen(AlgorithmType algorithm);
 SDFCryptoResult Sign(char * privateKey, AlgorithmType algorithm, char const* digest);
-SDFCryptoResult SignWithInnerKey(unsigned int keyIndex, char * password, AlgorithmType algorithm, char const* digest);
+SDFCryptoResult SignWithInternalKey(unsigned int keyIndex, char *password,
+                                    AlgorithmType algorithm,
+                                    char const *digest);
 SDFCryptoResult Verify(char * publicKey, AlgorithmType algorithm, char const* digest, char const* signature);
-SDFCryptoResult VerifyWithInnerKey(unsigned int keyIndex, AlgorithmType algorithm, char const* digest,char const* signature);
+SDFCryptoResult VerifyWithInternalKey(unsigned int keyIndex,
+                                      AlgorithmType algorithm,
+                                      char const *digest,
+                                      char const *signature);
 SDFCryptoResult Hash(char * key, AlgorithmType algorithm, char const* message);
-
+SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex,
+                                        AlgorithmType algorithm);
 
 SDFCryptoResult HashWithZ(char * key, AlgorithmType algorithm, char const* message);
 SDFCryptoResult makeResult(char * signature,char * publicKey,char * privateKey,bool result,char * hash,unsigned int code,char*);

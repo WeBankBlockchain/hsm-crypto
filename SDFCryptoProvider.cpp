@@ -279,6 +279,32 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
         return SDR_ALGNOTSUPPORT;
     }
 }
+unsigned int
+SDFCryptoProvider::ExportInternalPublicKey(Key &key, AlgorithmType algorithm) {
+  switch (algorithm) {
+  case SM2: {
+    if (!key.IsInternalKey()) {
+      return SDR_ALGNOTSUPPORT;
+    }
+    ECCrefPublicKey pk;
+    SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+    SGD_RV result =
+        SDF_ExportSignPublicKey_ECC(sessionHandle, key.Identifier(), &pk);
+    if (result != SDR_OK) {
+      m_sessionPool->ReturnSession(sessionHandle);
+      return result;
+    }
+    unsigned char pk_xy[64];
+    memcpy(pk_xy, pk.x, 32);
+    memcpy(pk_xy + 32, pk.y, 32);
+    key.setPublicKey(pk_xy, 64);
+    m_sessionPool->ReturnSession(sessionHandle);
+    return result;
+  }
+  default:
+    return SDR_ALGNOTSUPPORT;
+  }
+}
 
 char * SDFCryptoProvider::GetErrorMessage(unsigned int code)
 {
@@ -367,21 +393,28 @@ SDFCryptoResult Sign(char * privateKey, AlgorithmType algorithm, char const* dig
         return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
     }    
 }
-SDFCryptoResult SignWithInnerKey(unsigned int keyIndex, char * password, AlgorithmType algorithm, char const* digest){
-   try{
-        Key key = Key(keyIndex,password);
-        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
-        unsigned char * signature = (unsigned char *)malloc(64*sizeof(char));
-        unsigned int len;
-        unsigned int code = provider.Sign(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),signature,&len);
-        if (code != SDR_OK){
-            return makeResult(nullptr,nullptr,nullptr,false,nullptr,code,nullptr);
-        }else{
-            return makeResult(toHex(signature,len),nullptr,nullptr,false,nullptr,code,nullptr);
-        } 
-    }catch(const char* e){
-        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
-    }  
+SDFCryptoResult SignWithInternalKey(unsigned int keyIndex, char *password,
+                                    AlgorithmType algorithm,
+                                    char const *digest) {
+  try {
+    Key key = Key(keyIndex, password);
+    SDFCryptoProvider &provider = SDFCryptoProvider::GetInstance();
+    unsigned char *signature = (unsigned char *)malloc(64 * sizeof(char));
+    unsigned int len;
+    unsigned int code =
+        provider.Sign(key, algorithm, fromHex((char *)digest).data(),
+                      getHexByteLen((char *)digest), signature, &len);
+    if (code != SDR_OK) {
+      return makeResult(nullptr, nullptr, nullptr, false, nullptr, code,
+                        nullptr);
+    } else {
+      return makeResult(toHex(signature, len), nullptr, nullptr, false, nullptr,
+                        code, nullptr);
+    }
+  } catch (const char *e) {
+    return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_OK,
+                      (char *)e);
+  }
 }
 SDFCryptoResult Verify(char * publicKey, AlgorithmType algorithm, char const* digest, char const* signature){
     try{
@@ -399,18 +432,26 @@ SDFCryptoResult Verify(char * publicKey, AlgorithmType algorithm, char const* di
     }   
 }
 
-SDFCryptoResult VerifyWithInnerKey(unsigned int keyIndex, AlgorithmType algorithm, char const* digest,char const* signature){
-    try{
-        Key key = Key(keyIndex);
-        SearchData(fromHex((char *)signature).data(),64,16);
-        SearchData(fromHex((char *)digest).data(),32,16);
-        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
-        bool isValid;
-        unsigned int code = provider.Verify(key,algorithm,fromHex((char *)digest).data(),getHexByteLen((char *)digest),fromHex((char *)signature).data(),getHexByteLen((char*)signature),&isValid);
-        return makeResult(nullptr,nullptr,nullptr,isValid,nullptr,code,nullptr);
-    }catch(const char* e){
-        return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
-    }
+SDFCryptoResult VerifyWithInternalKey(unsigned int keyIndex,
+                                      AlgorithmType algorithm,
+                                      char const *digest,
+                                      char const *signature) {
+  try {
+    Key key = Key(keyIndex);
+    SearchData(fromHex((char *)signature).data(), 64, 16);
+    SearchData(fromHex((char *)digest).data(), 32, 16);
+    SDFCryptoProvider &provider = SDFCryptoProvider::GetInstance();
+    bool isValid;
+    unsigned int code = provider.Verify(
+        key, algorithm, fromHex((char *)digest).data(),
+        getHexByteLen((char *)digest), fromHex((char *)signature).data(),
+        getHexByteLen((char *)signature), &isValid);
+    return makeResult(nullptr, nullptr, nullptr, isValid, nullptr, code,
+                      nullptr);
+  } catch (const char *e) {
+    return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_OK,
+                      (char *)e);
+  }
 }
 
 SDFCryptoResult Hash(char * publicKey, AlgorithmType algorithm, char const* message){
@@ -440,6 +481,25 @@ SDFCryptoResult HashWithZ(char * key, AlgorithmType algorithm, char const* messa
     }catch(const char* e){
         return makeResult(nullptr,nullptr,nullptr,false,nullptr,SDR_OK,(char*)e);
     }
+}
+
+SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex,
+                                        AlgorithmType algorithm) {
+  try {
+    SDFCryptoProvider &provider = SDFCryptoProvider::GetInstance();
+    Key key = Key(keyIndex);
+    unsigned int code = provider.ExportInternalPublicKey(key, SM2);
+    if (code == SDR_OK) {
+      return makeResult(nullptr, toHex(key.PublicKey(), 64), nullptr, false,
+                        nullptr, code, nullptr);
+    } else {
+      return makeResult(nullptr, nullptr, nullptr, false, nullptr, code,
+                        nullptr);
+    }
+  } catch (const char *e) {
+    return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_OK,
+                      (char *)e);
+  }
 }
 
 SDFCryptoResult makeResult(char * signature,char * publicKey,char * privateKey,bool result,char * hash,unsigned int code,char* msg){

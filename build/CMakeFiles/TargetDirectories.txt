@@ -1,4 +1,0 @@
-/home/webank/fisco/sdf-crypto-cplus/build/CMakeFiles/rebuild_cache.dir
-/home/webank/fisco/sdf-crypto-cplus/build/CMakeFiles/edit_cache.dir
-/home/webank/fisco/sdf-crypto-cplus/build/CMakeFiles/sdf-crypto_arm.dir
-/home/webank/fisco/sdf-crypto-cplus/build/CMakeFiles/test-sdf-crypto.dir

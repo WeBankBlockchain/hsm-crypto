@@ -96,23 +96,27 @@ int main(int, const char* argv[]){
         cout << "Get verify result: " << verifyResult.result << endl;
     }
 
-
-
-    signResult = SignWithInnerKey(1,"123456",SM2,toHex(bHashStdResult,32));
-    cout << "****SignInnerKey****" << endl;
+    signResult =
+        SignWithInternalKey(1, "123456", SM2, toHex(bHashStdResult, 32));
+    cout << "****SignInternalKey****" << endl;
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
     }else{
         cout << "Get signature: " << signResult.signature << endl;
     }
 
-    cout << "****VerifyInnerKey****" << endl;
-    verifyResult = VerifyWithInnerKey(1,SM2,toHex(bHashStdResult,32),signResult.signature);
+    cout << "****VerifyInternalKey****" << endl;
+    verifyResult = VerifyWithInternalKey(1, SM2, toHex(bHashStdResult, 32),
+                                         signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << verifyResult.sdfErrorMessage <<endl;
     }else{
         cout << "Get verify result: " << verifyResult.result << endl;
     }
+
+    cout << "*****ExportInternalPublicKey****" << endl;
+    SDFCryptoResult exportResult = ExportInternalPublicKey(2, SM2);
+    cout << "Export public key: " << exportResult.publicKey << endl;
     return 0;
 }
 
