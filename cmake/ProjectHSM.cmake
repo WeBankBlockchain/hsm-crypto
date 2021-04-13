@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
-project(test-sdf-crypto VERSION "0.1.0")
+include(ExternalProject)
 
 if("${CMAKE_HOST_SYSTEM_NAME}" MATCHES "Linux")
     if("${ARCHITECTURE}" MATCHES "aarch64")
@@ -11,9 +10,7 @@ else()
     message(FATAL "unsupported platform")
 endif()
 
-include(ExternalProject)
-
-ExternalProject_Add(libhsm
+ExternalProject_Add(libsdf
     PREFIX ${CMAKE_SOURCE_DIR}/deps
     DOWNLOAD_NAME libhsm.tar.gz
     DOWNLOAD_NO_PROGRESS 1
@@ -25,31 +22,18 @@ ExternalProject_Add(libhsm
     LOG_INSTALL 1
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
-    INSTALL_COMMAND bash -c "/bin/cp ${CMAKE_SOURCE_DIR}/deps/src/libhsm/NF2180M3/kylin_v10/${HSM_LIB_NAME} ${CMAKE_SOURCE_DIR}/deps/lib/${HSM_LIB_NAME}"
+    INSTALL_COMMAND bash -c "/bin/cp ${CMAKE_SOURCE_DIR}/deps/src/libhsm/NF2180M3/kylin_v10/${HSM_LIB_NAME} ${CMAKE_SOURCE_DIR}/deps/lib/libswsds.so"
 )
 
-ExternalProject_Get_Property(libhsm SOURCE_DIR)
+ExternalProject_Get_Property(libsdf SOURCE_DIR)
 add_library(HSM STATIC IMPORTED)
 
 set(HSM_INCLUDE_DIR ${SOURCE_DIR}/include)
 file(MAKE_DIRECTORY ${HSM_INCLUDE_DIR})  # Must exist.
 
-set(HSM_LIB "${CMAKE_SOURCE_DIR}/deps/lib/${HSM_LIB_NAME}")
+set(HSM_LIB "${CMAKE_SOURCE_DIR}/deps/lib/libswsds.so")
 
 set_property(TARGET HSM PROPERTY IMPORTED_LOCATION ${HSM_LIB})
 set_property(TARGET HSM PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${HSM_INCLUDE_DIR})
 add_dependencies(HSM libhsm)
 unset(SOURCE_DIR)
-
-set(CMAKE_CXX_STANDARD 11) 
-set(INK_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/swsds)
-set(LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/libswsds)
-include_directories(${INK_DIR})
-link_directories(${LIB_DIR})
-link_libraries(swsds)
-# target_link_libraries(sdf-crypto PUBLIC libsdf/swsds.so)
-
-add_library(sdf-crypto_arm SHARED SDFCryptoProvider.cpp SDFCryptoProvider.h)
-target_link_libraries(sdf-crypto_arm swsds)
-add_executable(${PROJECT_NAME} TestSDF.cpp)
-target_link_libraries(${PROJECT_NAME} sdf-crypto_arm)
