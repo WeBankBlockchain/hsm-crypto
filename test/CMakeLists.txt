@@ -1,0 +1,7 @@
+file(GLOB HEADERS "*.h")
+file(GLOB SRC_LIST "*.cpp")
+add_executable(test-sdf-crypto ${SRC_LIST} ${HEADERS})
+#eth_use(sdf-crypto_arm OPTIONAL HSM)
+target_link_libraries(test-sdf-crypto PUBLIC sdf-crypto_arm)
+#add_executable(${PROJECT_NAME} TestSDF.cpp)
+#target_link_libraries(${PROJECT_NAME} sdf-crypto_arm)

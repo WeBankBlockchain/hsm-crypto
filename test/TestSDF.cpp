@@ -1,4 +1,4 @@
-#include "SDFCryptoProvider.h"
+#include <sdf/SDFCryptoProvider.h>
 #include<string>
 #include<iostream>
 
@@ -50,7 +50,7 @@ int main(int, const char* argv[]){
     }
 
     signResult =
-        SignWithInternalKey(1, "123456", SM2, toHex(bHashStdResult, 32));
+        SignWithInternalKey(1, "123456", SM2,(const char*) toHex(bHashStdResult, 32));
     cout << "****SignInternalKey****" << endl;
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
@@ -59,7 +59,7 @@ int main(int, const char* argv[]){
     }
 
     cout << "****VerifyInternalKey****" << endl;
-    verifyResult = VerifyWithInternalKey(1, SM2, toHex(bHashStdResult, 32),
+    verifyResult = VerifyWithInternalKey(1, SM2, (const char *)toHex(bHashStdResult, 32),
                                          signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << verifyResult.sdfErrorMessage <<endl;
