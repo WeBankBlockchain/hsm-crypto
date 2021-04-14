@@ -16,10 +16,14 @@
 file(GLOB_RECURSE HEADERS "*.h")
 file(GLOB_RECURSE SRC_LIST "*.cpp")
 list(APPEND SRC_LIST ${INSERT_SOURCES})
+#set(SDF_HEADER "${SDF_INCLUDE_DIR}/csmsds.h")
+#message("### sdf header ${SDF_INCLUDE_DIR}")
+#list(APPEND HEADERS ${SDF_HEADER})
+#message("****** sdf include dir ${HEADERS}")
 add_library(sdf-crypto_arm SHARED ${SRC_LIST} ${HEADERS})
 #eth_use(sdf-crypto_arm OPTIONAL HSM)
 
-#target_link_libraries(sdf-crypto_arm PUBLIC ${SDF_LIB})
+#target_link_libraries(sdf-crypto_arm PUBLIC "~/.hsm/libswsds.so")
 target_link_libraries(sdf-crypto_arm PUBLIC SDF)
 
 #messsage("*** ${CMAKE_SOURCE_DIR}/deps/lib/libswsds.so")
