@@ -305,6 +305,48 @@ SDFCryptoProvider::ExportInternalPublicKey(Key &key, AlgorithmType algorithm) {
   }
 }
 
+unsigned int SDFCryptoProvider::Encrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv, unsigned char const* plantext,
+        unsigned int const plantextLen, unsigned char* cyphertext, unsigned int* cyphertextLen){
+     switch (algorithm) {
+         case SM4_CBC: {
+             SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+             SGD_HANDLE keyHandler;
+             SGD_RV importResult = SDF_ImportKey(sessionHandle, (SGD_UCHAR*)key.Symmetrickey(), key.SymmetrickeyLen(), &keyHandler);
+             if (!importResult == SDR_OK){
+                 m_sessionPool->ReturnSession(sessionHandle);
+                return importResult;
+             }
+             SGD_RV result = SDF_Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv, (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*) cyphertext, cyphertextLen);
+             SDF_DestroyKey(sessionHandle, keyHandler);
+             m_sessionPool->ReturnSession(sessionHandle);
+             return result;
+         }
+     default:
+        return SDR_ALGNOTSUPPORT;
+    }
+}
+
+unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv, unsigned char const* cyphertext,
+        unsigned int const cyphertextLen, unsigned char* plantext, unsigned int* plantextLen){
+     switch (algorithm) {
+         case SM4_CBC: {
+             SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+             SGD_HANDLE keyHandler;
+             SGD_RV importResult = SDF_ImportKey(sessionHandle, key.Symmetrickey(), key.SymmetrickeyLen(), &keyHandler);
+             if (!importResult == SDR_OK){
+                 m_sessionPool->ReturnSession(sessionHandle);
+                return importResult;
+             }
+             SGD_RV result = SDF_Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv, (SGD_UCHAR*)cyphertext, cyphertextLen, (SGD_UCHAR*)plantext, plantextLen);
+			 SDF_DestroyKey(sessionHandle, keyHandler);
+             m_sessionPool->ReturnSession(sessionHandle);
+             return result;
+         }
+     default:
+        return SDR_ALGNOTSUPPORT;
+    }
+}
+
 char * SDFCryptoProvider::GetErrorMessage(unsigned int code)
 {
     switch (code)

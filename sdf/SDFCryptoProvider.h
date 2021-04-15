@@ -43,17 +43,21 @@ class Key
 public:
     unsigned char * PublicKey() const { return m_publicKey; }
     unsigned char * PrivateKey() const { return m_privateKey; }
+    unsigned char * Symmetrickey() const {return m_symmetricKey;}
     int PublicKeyLen() const { return m_publicKeyLen; }
     int PrivateKeyLen() const { return m_privateKeyLen; }
+    int SymmetrickeyLen() const {return m_symmetricKeyLen;}
     unsigned int Identifier() const { return m_keyIndex; };
     char * Password() const { return m_keyPassword; };
     bool IsInternalKey() const { return m_isInternalKey; }
     Key(void){};
     Key(unsigned char* privateKey,int privateKeyLen, unsigned char* publicKey, int publicKeyLen)
     {
-        m_privateKey = privateKey;
+        m_privateKey = (unsigned char*)malloc(privateKeyLen * sizeof(char));
+        memcpy(m_privateKey, privateKey, privateKeyLen);
         m_privateKeyLen = privateKeyLen;
-        m_publicKey = publicKey;
+        m_publicKey = (unsigned char*)malloc(publicKeyLen * sizeof(char));
+        memcpy(m_publicKey, publicKey, publicKeyLen);
         m_publicKeyLen = publicKeyLen;
     };
     Key(const unsigned int keyIndex, char *& password)
@@ -79,14 +83,23 @@ public:
         memcpy(m_publicKey, publicKey, len);
         m_publicKeyLen = len;
     };
+    void setSymmetricKey(unsigned char* symmetricKey, unsigned int len)
+    {
+        m_symmetricKey = (unsigned char*)malloc(len * sizeof(char));
+        memcpy(m_symmetricKey, symmetricKey, len);
+        m_symmetricKeyLen = len;
+    };
+
 
 private:
     unsigned int m_keyIndex;
     char * m_keyPassword;
     unsigned char * m_privateKey;
     unsigned char * m_publicKey;
+    unsigned char * m_symmetricKey;
     int m_privateKeyLen;
     int m_publicKeyLen;
+    int m_symmetricKeyLen;
     bool m_isInternalKey = false;
 };
 
@@ -154,13 +167,13 @@ public:
     /**
      * Encrypt
      */
-    unsigned int Encrypt(Key const& key, AlgorithmType algorithm, unsigned char const* plantext,
+    unsigned int Encrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv, unsigned char const* plantext,
         unsigned int const plantextLen, unsigned char* cyphertext, unsigned int* cyphertextLen);
 
     /**
      * Decrypt
      */
-    unsigned int Decrypt(Key const& key, AlgorithmType algorithm, unsigned char const* cyphertext,
+    unsigned int Decrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv, unsigned char const* cyphertext,
         unsigned int const cyphertextLen, unsigned char* plantext, unsigned int* plantextLen);
 
     /**
