@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-
 using namespace std;
 namespace dev
 {
@@ -17,7 +16,7 @@ SessionPool::SessionPool(int size, void* deviceHandle)
 {
     m_size = size;
     m_deviceHandle = deviceHandle;
-    for (int n = 0; n < m_size; n++)
+    for (size_t n = 0; n < m_size; n++)
     {
         SGD_HANDLE sessionHandle;
         SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
@@ -27,7 +26,7 @@ SessionPool::SessionPool(int size, void* deviceHandle)
         }
         m_pool.push_back(sessionHandle);
     }
-};
+}
 SessionPool::~SessionPool()
 {
     auto iter = m_pool.begin();
@@ -37,7 +36,7 @@ SessionPool::~SessionPool()
         ++iter;
     }
     m_size = 0;
-};
+}
 void* SessionPool::GetSession()
 {
     SGD_HANDLE session = NULL;
@@ -56,13 +55,13 @@ void* SessionPool::GetSession()
     m_pool.pop_front();
     --m_size;
     return session;
-};
+}
 
 void SessionPool::ReturnSession(void* session)
 {
     m_pool.push_back(session);
     ++m_size;
-};
+}
 
 SDFCryptoProvider::SDFCryptoProvider()
 {
@@ -353,10 +352,10 @@ char * SDFCryptoProvider::GetErrorMessage(unsigned int code)
     case SDR_KEYERR:
         return (char *)"key error";
     default:
-	std::string err = "unkown code " + std::to_string(code);
-	char * c_err = new char[err.length()+1];
-	strcpy(c_err,err.c_str());
-	return c_err;
+        std::string err = "unkown code " + std::to_string(code);
+        char * c_err = new char[err.length()+1];
+        strcpy(c_err,err.c_str());
+        return c_err;
     }
 }
 
@@ -467,8 +466,6 @@ SDFCryptoResult Hash(char * publicKey, AlgorithmType algorithm, char const* mess
     }   
     
 }
-
-
 
 SDFCryptoResult HashWithZ(char * key, AlgorithmType algorithm, char const* message){
     try{
