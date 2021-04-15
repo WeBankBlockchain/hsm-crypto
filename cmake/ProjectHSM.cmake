@@ -19,16 +19,16 @@ ExternalProject_Add(libsdf
     LOG_CONFIGURE 1
     LOG_BUILD 1
     LOG_INSTALL 1
-    CONFIGURE_COMMAND bash -c "/bin/mkdir ~/.hsm/"
+    CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
-    INSTALL_COMMAND bash -c "/bin/cp ${CMAKE_SOURCE_DIR}/deps/src/libsdf/NF2180M3/kylin_v10/libswsds.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+    INSTALL_COMMAND ""
 )
 
 ExternalProject_Get_Property(libsdf SOURCE_DIR)
 add_library(SDF STATIC IMPORTED)
 set(SDF_INCLUDE_DIR ${SOURCE_DIR}/NF2180M3/kylin_v10)
 file(MAKE_DIRECTORY ${SDF_INCLUDE_DIR})  # Must exist.
-set(SDF_LIB "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libswsds.so")
+set(SDF_LIB "/lib/libswsds.so")
 
 set_property(TARGET SDF PROPERTY IMPORTED_LOCATION ${SDF_LIB})
 set_property(TARGET SDF PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${SDF_INCLUDE_DIR})

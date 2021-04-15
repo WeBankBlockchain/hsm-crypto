@@ -103,7 +103,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
             SGD_RV getAccessRightCode = SDF_GetPrivateKeyAccessRight(sessionHandle, key.Identifier(), (unsigned char *) key.Password(), (unsigned int)strlen(key.Password()));
             if (getAccessRightCode != SDR_OK){
                 m_sessionPool->ReturnSession(sessionHandle);
-                return signCode;
+                return getAccessRightCode;
             }
             signCode = SDF_InternalSign_ECC(sessionHandle, key.Identifier(),(SGD_UCHAR*)digest, digestLen, (ECCSignature*)signature);
             SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.Identifier());
