@@ -25,7 +25,7 @@ ExternalProject_Add(libsdf
 )
 
 ExternalProject_Get_Property(libsdf SOURCE_DIR)
-add_library(SDF STATIC IMPORTED)
+add_library(SDF SHARED IMPORTED)
 set(SDF_INCLUDE_DIR ${SOURCE_DIR}/NF2180M3/kylin_v10)
 file(MAKE_DIRECTORY ${SDF_INCLUDE_DIR})  # Must exist.
 set(SDF_LIB "/lib/libswsds.so")
@@ -33,5 +33,4 @@ set(SDF_LIB "/lib/libswsds.so")
 set_property(TARGET SDF PROPERTY IMPORTED_LOCATION ${SDF_LIB})
 set_property(TARGET SDF PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${SDF_INCLUDE_DIR})
 add_dependencies(SDF libsdf)
-
 unset(SOURCE_DIR)
