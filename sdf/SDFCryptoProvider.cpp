@@ -401,6 +401,8 @@ char * SDFCryptoProvider::GetErrorMessage(unsigned int code)
     }
 }
 
+namespace sdf
+{
 SDFCryptoResult KeyGen(AlgorithmType algorithm){
     try{
         SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
@@ -669,6 +671,7 @@ int SearchData(unsigned char *sourceData, unsigned int dataLength, unsigned int 
 	}
 	return 0;
 }
+} // namespace sdf
 
 }  // namespace crypto
 }  // namespace dev
