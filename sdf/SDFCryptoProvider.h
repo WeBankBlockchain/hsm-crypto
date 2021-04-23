@@ -191,6 +191,8 @@ public:
     static char * GetErrorMessage(unsigned int code);
 };
 
+namespace sdf
+{
 struct SDFCryptoResult{
     char * signature;
     char * publicKey;
@@ -222,5 +224,7 @@ int fromHexChar(char _i);
 unsigned int getHexByteLen(char * hexString);
 int PrintData(char*,unsigned char*,unsigned int, unsigned int);
 int SearchData(unsigned char *, unsigned int , unsigned int);
+
+}  // namespace sdf
 }  // namespace crypto
 }  // namespace dev

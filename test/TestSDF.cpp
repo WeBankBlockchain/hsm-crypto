@@ -5,6 +5,8 @@
 using namespace std;
 using namespace dev;
 using namespace crypto;
+using namespace sdf;
+
 
 int main(int, const char* argv[]){
     // Make hash
