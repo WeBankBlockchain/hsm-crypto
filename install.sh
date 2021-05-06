@@ -1,12 +1,12 @@
 #!/bin/bash
 mkdir build
 cd build
-cmake ..
+cmake .. -BUILD_SDF=on
 make
 cd ..
 mkdir include
-cp deps/src/libsdf/NF2180M3/kylin_v10/csmsds.h  include/
-cp sdf/SDFCryptoProvider.h  include/
+cp hsm/CryptoProvider.h  include/
+cp hsm/sdf/SDFCryptoProvider.h  include/
 mkdir lib
-cp build/sdf/libsdf-crypto_arm_static.a lib/libsdf-crypto_arm.a
-cp build/bin/libsdf-crypto_arm.so lib/libsdf-crypto_arm.so 
+cp build/output/libsdf-crypto_arm.a lib/libsdf-crypto_arm.a
+cp build/output/libsdf-crypto_arm.so lib/libsdf-crypto_arm.so 
