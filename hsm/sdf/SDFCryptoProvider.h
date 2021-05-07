@@ -150,12 +150,11 @@ SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType alg
 SDFCryptoResult HashWithZ(char* key, AlgorithmType algorithm, char const* message);
 SDFCryptoResult makeResult(char* signature, char* publicKey, char* privateKey, bool result,
     char* hash, unsigned int code, char*);
-char* toHex(const std::vector<byte> &data);
-std::vector<byte> fromHex(char* hexString);
+char* sdfToHex(const std::vector<byte>& data);
+std::vector<byte> sdfFromHex(char* hexString);
 int fromHexChar(char _i);
 unsigned int getHexByteLen(char* hexString);
 int PrintData(char*, unsigned char*, unsigned int, unsigned int);
-// int SearchData(unsigned char*, unsigned int, unsigned int);
 
 }  // namespace sdf
 }  // namespace hsm

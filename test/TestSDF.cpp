@@ -21,13 +21,13 @@ int main(int, const char* argv[]){
 
     std::vector<byte> bHashStdResultVector = {0xde,0xbe,0x9f,0xf9,0x22,0x75,0xb8,0xa1,0x38,0x60,0x48,0x89,0xc1,0x8e,0x5a,0x4d,
                                     0x6f,0xdb,0x70,0xe5,0x38,0x7e,0x57,0x65,0x29,0x3d,0xcb,0xa3,0x9c,0x0c,0x57,0x32};
-    SDFCryptoResult result = Hash(nullptr,SM3,toHex(bHashVector));
+    SDFCryptoResult result = Hash(nullptr, SM3, sdfToHex(bHashVector));
     if (result.sdfErrorMessage != nullptr){
         cout << "Get error : " << result.sdfErrorMessage <<endl;
     }else{
         cout << "Get Hash : " << result.hash << endl;
 
-        cout << "Standard : " << toHex(bHashStdResultVector) <<endl;
+        cout << "Standard : " << sdfToHex(bHashStdResultVector) << endl;
     }
     
     result = KeyGen(SM2);
@@ -39,7 +39,7 @@ int main(int, const char* argv[]){
         cout << "Get private key : " << result.privateKey << endl;
     }
 
-    SDFCryptoResult signResult = Sign(result.privateKey,SM2,toHex(bHashStdResultVector));
+    SDFCryptoResult signResult = Sign(result.privateKey, SM2, sdfToHex(bHashStdResultVector));
     cout << "****Sign****" << endl;
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
@@ -48,16 +48,15 @@ int main(int, const char* argv[]){
     }
 
     cout << "****Verify****" << endl;
-    SDFCryptoResult verifyResult =
-        Verify(result.publicKey, SM2, hsm::sdf::toHex(bHashStdResultVector), signResult.signature);
+    SDFCryptoResult verifyResult = Verify(
+        result.publicKey, SM2, hsm::sdf::sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << verifyResult.sdfErrorMessage <<endl;
     }else{
         cout << "Get verify result: " << verifyResult.result << endl;
     }
 
-    signResult =
-        SignWithInternalKey(1, "123456", SM2, (char const*) toHex(bHashStdResultVector));
+    signResult = SignWithInternalKey(1, "123456", SM2, sdfToHex(bHashStdResultVector));
     cout << "****SignInternalKey****" << endl;
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
@@ -66,8 +65,8 @@ int main(int, const char* argv[]){
     }
 
     cout << "****VerifyInternalKey****" << endl;
-    verifyResult = VerifyWithInternalKey(1, SM2, (const char *)toHex(bHashStdResultVector),
-                                         signResult.signature);
+    verifyResult = VerifyWithInternalKey(
+        1, SM2, (const char*)sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << verifyResult.sdfErrorMessage <<endl;
     }else{
@@ -98,8 +97,8 @@ int main(int, const char* argv[]){
       cout << "Failed!!" <<endl;
       cout << provider.GetErrorMessage(encryptCode) <<endl;
     } else {
-        cout << "Result: " << toHex(cypher) << endl;
-        cout << "Stand : " << toHex(pbCipherText) << endl;
+        cout << "Result: " << sdfToHex(cypher) << endl;
+        cout << "Stand : " << sdfToHex(pbCipherText) << endl;
     }
 
 
@@ -112,9 +111,8 @@ int main(int, const char* argv[]){
       cout << "Failed!!" <<endl;
       cout << provider.GetErrorMessage(decryptoCode) <<endl;
     } else {
-        cout << "Result: " << toHex(plain) << endl;
-        cout << "Stand : " << toHex(pbPlainText) << endl;
+        cout << "Result: " << sdfToHex(plain) << endl;
+        cout << "Stand : " << sdfToHex(pbPlainText) << endl;
     }
     return 0;
 }
-

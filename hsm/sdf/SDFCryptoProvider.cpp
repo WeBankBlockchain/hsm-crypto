@@ -484,8 +484,8 @@ SDFCryptoResult KeyGen(AlgorithmType algorithm)
             }
             else
             {
-                return makeResult(nullptr, toHex(*key.publicKey().get()),
-                    toHex(*key.privateKey().get()), false, nullptr, code, nullptr);
+                return makeResult(nullptr, sdfToHex(*key.publicKey().get()),
+                    sdfToHex(*key.privateKey().get()), false, nullptr, code, nullptr);
             }
         }
         catch (const char* e)
@@ -505,7 +505,7 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
         try
         {
             Key key = Key();
-            const vector<byte> sk = fromHex(privateKey);
+            const vector<byte> sk = sdfFromHex(privateKey);
             std::shared_ptr<const vector<byte>> privKey =
                 std::make_shared<const std::vector<byte>>((byte*)sk.data(), (byte*)sk.data() + 32);
             key.setPrivateKey(privKey);
@@ -513,7 +513,7 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
             std::vector<byte> signature(64);
             // unsigned char* signature = (unsigned char*)malloc(64 * sizeof(char));
             unsigned int len;
-            unsigned int code = provider.Sign(key, algorithm, fromHex((char*)digest).data(),
+            unsigned int code = provider.Sign(key, algorithm, sdfFromHex((char*)digest).data(),
                 getHexByteLen((char*)digest), signature.data(), &len);
             if (code != SDR_OK)
             {
@@ -522,7 +522,7 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
             else
             {
                 return makeResult(
-                    toHex(signature), nullptr, nullptr, false, nullptr, code, nullptr);
+                    sdfToHex(signature), nullptr, nullptr, false, nullptr, code, nullptr);
             }
         }
         catch (const char* e)
@@ -549,7 +549,7 @@ SDFCryptoResult SignWithInternalKey(
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             std::vector<byte> signature(64);
             unsigned int len;
-            unsigned int code = provider.Sign(key, algorithm, fromHex((char*)digest).data(),
+            unsigned int code = provider.Sign(key, algorithm, sdfFromHex((char*)digest).data(),
                 getHexByteLen((char*)digest), signature.data(), &len);
             if (code != SDR_OK)
             {
@@ -558,7 +558,7 @@ SDFCryptoResult SignWithInternalKey(
             else
             {
                 return makeResult(
-                    toHex(signature), nullptr, nullptr, false, nullptr, code, nullptr);
+                    sdfToHex(signature), nullptr, nullptr, false, nullptr, code, nullptr);
             }
         }
         catch (const char* e)
@@ -579,17 +579,14 @@ SDFCryptoResult Verify(
         try
         {
             Key key = Key();
-            std::vector<byte> pk = fromHex((char*)publicKey);
+            std::vector<byte> pk = sdfFromHex((char*)publicKey);
             std::shared_ptr<const vector<byte>> pubKey =
                 std::make_shared<const std::vector<byte>>((byte*)pk.data(), (byte*)pk.data() + 64);
             key.setPublicKey(pubKey);
-            // SearchData(fromHex(publicKey).data(), 64, 16);
-            // SearchData(fromHex((char*)signature).data(), 64, 16);
-            // SearchData(fromHex((char*)digest).data(), 32, 16);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             bool isValid;
-            unsigned int code = provider.Verify(key, algorithm, fromHex((char*)digest).data(),
-                getHexByteLen((char*)digest), fromHex((char*)signature).data(),
+            unsigned int code = provider.Verify(key, algorithm, sdfFromHex((char*)digest).data(),
+                getHexByteLen((char*)digest), sdfFromHex((char*)signature).data(),
                 getHexByteLen((char*)signature), &isValid);
             return makeResult(nullptr, nullptr, nullptr, isValid, nullptr, code, nullptr);
         }
@@ -612,12 +609,10 @@ SDFCryptoResult VerifyWithInternalKey(
         try
         {
             Key key = Key(keyIndex);
-            // SearchData(fromHex((char *)signature).data(), 64, 16);
-            // SearchData(fromHex((char *)digest).data(), 32, 16);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             bool isValid;
-            unsigned int code = provider.Verify(key, algorithm, fromHex((char*)digest).data(),
-                getHexByteLen((char*)digest), fromHex((char*)signature).data(),
+            unsigned int code = provider.Verify(key, algorithm, sdfFromHex((char*)digest).data(),
+                getHexByteLen((char*)digest), sdfFromHex((char*)signature).data(),
                 getHexByteLen((char*)signature), &isValid);
             return makeResult(nullptr, nullptr, nullptr, isValid, nullptr, code, nullptr);
         }
@@ -643,9 +638,10 @@ SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* messa
             // unsigned char hashResult[32];
             vector<byte> hashResult(32);
             unsigned int len;
-            unsigned int code = provider.Hash(nullptr, algorithm, fromHex((char*)message).data(),
+            unsigned int code = provider.Hash(nullptr, algorithm, sdfFromHex((char*)message).data(),
                 getHexByteLen((char*)message), hashResult.data(), &len);
-            return makeResult(nullptr, nullptr, nullptr, false, toHex(hashResult), code, nullptr);
+            return makeResult(
+                nullptr, nullptr, nullptr, false, sdfToHex(hashResult), code, nullptr);
         }
         catch (const char* e)
         {
@@ -669,9 +665,10 @@ SDFCryptoResult HashWithZ(char* key, AlgorithmType algorithm, char const* messag
             // unsigned char hashResult[32];
             vector<byte> hashResult(32);
             unsigned int len;
-            unsigned int code = provider.Hash(nullptr, algorithm, fromHex((char*)message).data(),
+            unsigned int code = provider.Hash(nullptr, algorithm, sdfFromHex((char*)message).data(),
                 getHexByteLen((char*)message), hashResult.data(), &len);
-            return makeResult(nullptr, nullptr, nullptr, false, toHex(hashResult), code, nullptr);
+            return makeResult(
+                nullptr, nullptr, nullptr, false, sdfToHex(hashResult), code, nullptr);
         }
         catch (const char* e)
         {
@@ -695,8 +692,8 @@ SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType alg
             unsigned int code = provider.ExportInternalPublicKey(key, SM2);
             if (code == SDR_OK)
             {
-                return makeResult(
-                    nullptr, toHex(*key.publicKey().get()), nullptr, false, nullptr, code, nullptr);
+                return makeResult(nullptr, sdfToHex(*key.publicKey().get()), nullptr, false,
+                    nullptr, code, nullptr);
             }
             else
             {
@@ -736,7 +733,7 @@ SDFCryptoResult makeResult(char* signature, char* publicKey, char* privateKey, b
     }
     return cryptoResult;
 }
-char* toHex(const std::vector<byte>& data)
+char* sdfToHex(const std::vector<byte>& data)
 {
     static char const* hexdigits = "0123456789abcdef";
     std::string hex(data.size() * 2, '0');
@@ -751,7 +748,7 @@ char* toHex(const std::vector<byte>& data)
     return c_hex;
 }
 
-std::vector<byte> fromHex(char* hexString)
+std::vector<byte> sdfFromHex(char* hexString)
 {
     size_t len = strlen(hexString);
     unsigned s = (len >= 2 && hexString[0] == '0' && hexString[1] == 'x') ? 2 : 0;
