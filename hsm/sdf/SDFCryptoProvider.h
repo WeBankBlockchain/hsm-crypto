@@ -77,54 +77,54 @@ public:
      * Generate key
      * Return error code
      */
-    unsigned int KeyGen(AlgorithmType algorithm, Key* key);
+    unsigned int KeyGen(AlgorithmType algorithm, Key* key) override;
 
     /**
      * Sign
      */
     unsigned int Sign(Key const& key, AlgorithmType algorithm, unsigned char const* digest,
-        unsigned int digestLen, unsigned char* signature, unsigned int* signatureLen);
+        unsigned int digestLen, unsigned char* signature, unsigned int* signatureLen) override;
 
     /**
      * Verify signature
      */
     unsigned int Verify(Key const& key, AlgorithmType algorithm, unsigned char const* digest,
         unsigned int digestLen, unsigned char const* signature, unsigned int signatureLen,
-        bool* result);
+        bool* result) override;
 
     /**
      * Make hash
      */
     unsigned int Hash(Key* key, AlgorithmType algorithm, unsigned char const* message,
-        unsigned int messageLen, unsigned char* digest, unsigned int* digestLen);
+        unsigned int messageLen, unsigned char* digest, unsigned int* digestLen) override;
 
     /**
      * Encrypt
      */
     unsigned int Encrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv,
         unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
-        unsigned int* cyphertextLen);
+        unsigned int* cyphertextLen) override;
 
     /**
      * Decrypt
      */
     unsigned int Decrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv,
         unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
-        unsigned int* plantextLen);
+        unsigned int* plantextLen) override;
 
     /**
      * Make sm3 hash with z value
      */
     unsigned int HashWithZ(Key* key, AlgorithmType algorithm, unsigned char const* zValue,
         unsigned int zValueLen, unsigned char const* message, unsigned int messageLen,
-        unsigned char* digest, unsigned int* digestLen);
+        unsigned char* digest, unsigned int* digestLen) override;
 
     /**
      *  Get public key of an internal key
      */
-    unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm);
+    unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm) override;
 
-    char* GetErrorMessage(unsigned int code);
+    char* GetErrorMessage(unsigned int code) override;
 };
 
 struct SDFCryptoResult
