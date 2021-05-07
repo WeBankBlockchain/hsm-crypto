@@ -1,0 +1,7 @@
+if(BUILD_SDF)
+    file(GLOB_RECURSE HEADERS "*.h")
+    file(GLOB_RECURSE SRC_LIST "*.cpp")
+    list(APPEND SRC_LIST ${INSERT_SOURCES})
+    add_library(sdf-crypto_arm ${SRC_LIST} ${HEADERS})
+    target_link_libraries(sdf-crypto_arm PUBLIC SDF)
+endif()
