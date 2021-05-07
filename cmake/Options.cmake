@@ -11,7 +11,7 @@ macro(add_option O DEF)
 endmacro()
 
 add_option(BUILD_SDF OFF)
-add_option(BUILD_STATIC_LIBS OFF)
+add_option(BUILD_SHARED_LIBS OFF)
 
 macro(print_config NAME)
 message("")
@@ -21,7 +21,7 @@ message("-----------------------------------------------------------------------
 message("-- CMake              Cmake version and location   ${CMAKE_VERSION} (${CMAKE_COMMAND})")
 message("-- Compiler           C++ compiler version         ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message("-- TARGET_PLATFORM    Target platform              ${CMAKE_SYSTEM_NAME} ${ARCHITECTURE}")
-message("-- BUILD_STATIC_LIBS  Build static lib             ${BUILD_STATIC_LIBS}")
+message("-- BUILD_SHARED_LIBS  Build shard lib              ${BUILD_SHARED_LIBS}")
 message("-- BUILD_SDF          Build SDF HSM                ${BUILD_SDF}")
 message("------------------------------------------------------------------------")
 message("")

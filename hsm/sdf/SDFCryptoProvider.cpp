@@ -36,12 +36,9 @@ SessionPool::SessionPool(int size, void* deviceHandle)
 }
 SessionPool::~SessionPool()
 {
-    auto iter = m_pool.begin();
-    while (iter != m_pool.end())
-    {
-        SDF_CloseSession(*iter);
-        ++iter;
-    }
+    for(auto session : m_pool) {  
+        SDF_CloseSession(session); 
+    } 
 }
 void* SessionPool::GetSession()
 {
@@ -842,23 +839,6 @@ int PrintData(
 
     return 0;
 }
-
-// int SearchData(unsigned char *sourceData, unsigned int dataLength, unsigned int rowCount)
-// {
-// 	int i, j;
-
-// 	if((sourceData == NULL) || (rowCount == 0) || (dataLength == 0))
-// 		return -1;
-// 	for(i=0; i<(int)(dataLength/rowCount); i++)
-// 	{
-// 		i * rowCount;
-// 		for(j=0; j<(int)rowCount; j++)
-// 		{
-// 			*(sourceData + i*rowCount + j);
-// 		}
-// 	}
-// 	return 0;
-// }
 
 }  // namespace sdf
 }  // namespace hsm

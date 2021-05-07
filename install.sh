@@ -1,7 +1,7 @@
 #!/bin/bash
 mkdir build
 cd build
-cmake .. -DBUILD_SDF=on -DBUILD_STATIC_LIB=on
+cmake .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off
 make
 cd ..
 mkdir include
