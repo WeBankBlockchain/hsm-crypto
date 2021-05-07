@@ -47,7 +47,8 @@ private:
     void* m_deviceHandle;
     size_t m_size;
     std::list<void*> m_pool;
-    std::mutex mut;
+    std::mutex mtx;
+    std::condition_variable cv;
 };
 
 /**

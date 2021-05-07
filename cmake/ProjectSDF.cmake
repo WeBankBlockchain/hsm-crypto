@@ -10,6 +10,7 @@ else()
 endif()
 
 
+
 find_library(SWSDS swsds /usr/lib)
 if(NOT SWSDS)
     message()
@@ -19,6 +20,8 @@ find_file(SWSDS_H csmsds.h /usr/include)
 if(NOT SWSDS_H)
     message(FATAL " Can not find swsds.h under /usr/include, please make sure you have a crypto PCI card on your machine, as well as the the driver and libraries are installed.")
 endif()
+
+
 add_library(SDF SHARED IMPORTED)
 set_property(TARGET SDF PROPERTY IMPORTED_LOCATION ${SWSDS})
 #set_property(TARGET SDF PROPERTY INTERFACE_INCLUDE_DIRECTORIES SWSDS_H)
