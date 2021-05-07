@@ -32,7 +32,6 @@ using namespace std;
 using namespace hsm;
 namespace hsm
 {
-class KeyPair;
 namespace sdf
 {
 class SessionPool

@@ -509,8 +509,6 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
             std::shared_ptr<const vector<byte>> privKey =
                 std::make_shared<const std::vector<byte>>((byte*)sk.data(), (byte*)sk.data() + 32);
             key.setPrivateKey(privKey);
-            // SearchData(fromHex(privateKey).data(), 32, 16);
-            // SearchData(fromHex((char*)digest).data(), 32, 16);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             std::vector<byte> signature(64);
             // unsigned char* signature = (unsigned char*)malloc(64 * sizeof(char));
