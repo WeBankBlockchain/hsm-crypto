@@ -2,15 +2,23 @@
 #include <hsm/sdf/SDFCryptoProvider.h>
 #include <iostream>
 #include <string>
+#include<thread>
 
 using namespace std;
 using namespace hsm;
-using namespace sdf;
+using namespace hsm::sdf;
 
+
+void callCard(int inum)
+{
+	SDFCryptoResult result = KeyGen(SM2);
+}
 
 int main(int, const char* argv[]){
     // Crypto provider 测试
+    cout << "**************Begin Test, bash test-sdf-crypto [loopRound]************************"<<endl;
     SDFCryptoProvider& provider=SDFCryptoProvider::GetInstance();
+    size_t loopRound = atoi(argv[1]);
 
     // Make hash
     cout << "**************Make SM3 Hash************************"<<endl;
@@ -114,5 +122,16 @@ int main(int, const char* argv[]){
         cout << "Result: " << sdfToHex(plain) << endl;
         cout << "Stand : " << sdfToHex(pbPlainText) << endl;
     }
+
+    vector<thread> callCardThread;
+	for (int i = 0; i < loopRound; i++)
+	{
+		callCardThread.push_back(thread(callCard,i)); 
+    }
+    for (auto iter = callCardThread.begin(); iter!= callCardThread.end(); iter++)
+	{
+		iter->join();  
+	}
+	cout << "prallel test finished " << endl;
     return 0;
 }

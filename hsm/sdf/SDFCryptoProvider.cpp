@@ -42,19 +42,9 @@ SessionPool::~SessionPool()
 }
 void* SessionPool::GetSession()
 {
-    std::lock_guard<std::mutex> l(mut);
-    SGD_HANDLE session = NULL;
-    if (m_pool.size() == 0)
-    {
-        SGD_HANDLE sessionHandle;
-        SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
-        if (sessionStatus != SDR_OK)
-        {
-            throw sessionStatus;
-        }
-        m_pool.push_back(sessionHandle);
-    }
-    session = m_pool.front();
+    std::unique_lock<std::mutex> l(mtx);
+    cv.wait(l, [this]()->bool { return !m_pool.empty(); });
+    SGD_HANDLE session = m_pool.front();
     m_pool.pop_front();
     return session;
 }
@@ -67,14 +57,9 @@ void SessionPool::SetPoolSize(int size){
 }
 void SessionPool::ReturnSession(void* session)
 {
-    std::lock_guard<std::mutex> l(mut);
+    std::unique_lock<std::mutex> l(mtx);
     m_pool.push_back(session);
-    while (m_pool.size() > m_size)
-    {
-        SGD_HANDLE session = m_pool.front();
-        m_pool.pop_front();
-        SDF_CloseSession(session);
-    }
+    cv.notify_all();
 }
 
 SDFCryptoProvider::SDFCryptoProvider()
@@ -84,7 +69,7 @@ SDFCryptoProvider::SDFCryptoProvider()
     {
         throw deviceStatus;
     }
-    m_sessionPool = new SessionPool(10, m_deviceHandle);
+    m_sessionPool = new SessionPool(50, m_deviceHandle);
 }
 
 SDFCryptoProvider::SDFCryptoProvider(int sessionPoolSize)
