@@ -2,7 +2,7 @@
 #include <hsm/sdf/SDFCryptoProvider.h>
 #include <iostream>
 #include <string>
-#include<thread>
+#include <thread>
 
 using namespace std;
 using namespace hsm;
@@ -11,14 +11,25 @@ using namespace hsm::sdf;
 
 void callCard(int inum)
 {
-	SDFCryptoResult result = KeyGen(SM2);
+    for( int i = 0; i < inum; i++){
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        Key key = Key();
+        unsigned int code = provider.KeyGen(SM2, &key);
+        if (code != SDR_OK)
+        {
+            cout << provider.GetErrorMessage(code) << endl;
+        }
+    }
 }
 
 int main(int, const char* argv[]){
     // Crypto provider 测试
-    cout << "**************Begin Test, bash test-sdf-crypto [loopRound]************************"<<endl;
-    SDFCryptoProvider& provider=SDFCryptoProvider::GetInstance();
-    size_t loopRound = atoi(argv[1]);
+    cout << "**************Begin Test, bash test-sdf-crypto [sessionPoolSize] "
+            "[loopRound]************************"
+         << endl;
+    size_t sessionPoolRound = atoi(argv[1]);
+    size_t loopRound = atoi(argv[2]);
+    SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
 
     // Make hash
     cout << "**************Make SM3 Hash************************"<<endl;
@@ -123,10 +134,11 @@ int main(int, const char* argv[]){
         cout << "Stand : " << sdfToHex(pbPlainText) << endl;
     }
 
+    cout << "******Prallel test******" << endl;
     vector<thread> callCardThread;
-	for (int i = 0; i < loopRound; i++)
-	{
-		callCardThread.push_back(thread(callCard,i)); 
+    for (int i = 0; i < sessionPoolRound; i++)
+    {
+        callCardThread.push_back(thread(callCard, loopRound));
     }
     for (auto iter = callCardThread.begin(); iter!= callCardThread.end(); iter++)
 	{

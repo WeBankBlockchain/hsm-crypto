@@ -49,12 +49,6 @@ void* SessionPool::GetSession()
     return session;
 }
 
-void SessionPool::SetPoolSize(int size){
-    if(size <= 0){
-        return;
-    }
-    m_size = size;
-}
 void SessionPool::ReturnSession(void* session)
 {
     std::unique_lock<std::mutex> l(mtx);
@@ -93,14 +87,13 @@ SDFCryptoProvider::~SDFCryptoProvider()
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance()
 {
-    static SDFCryptoProvider instance;
-    return instance;
+    return GetInstance(50);
 }
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize)
 {
-    GetInstance().m_sessionPool->SetPoolSize(sessionPoolSize);
-    return GetInstance();
+    static SDFCryptoProvider instance(sessionPoolSize);
+    return instance;
 }
 
 unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
