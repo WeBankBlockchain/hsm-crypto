@@ -49,12 +49,6 @@ void* SessionPool::GetSession()
     return session;
 }
 
-void SessionPool::SetPoolSize(int size){
-    if(size <= 0){
-        return;
-    }
-    m_size = size;
-}
 void SessionPool::ReturnSession(void* session)
 {
     std::unique_lock<std::mutex> l(mtx);
@@ -93,14 +87,13 @@ SDFCryptoProvider::~SDFCryptoProvider()
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance()
 {
-    static SDFCryptoProvider instance;
-    return instance;
+    return GetInstance(50);
 }
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize)
 {
-    GetInstance().m_sessionPool->SetPoolSize(sessionPoolSize);
-    return GetInstance();
+    static SDFCryptoProvider instance(sessionPoolSize);
+    return instance;
 }
 
 unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
@@ -115,25 +108,37 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
         SGD_RV signCode;
         if (key.isInternalKey())
         {
-            SGD_RV getAccessRightCode =
-                SDF_GetPrivateKeyAccessRight(sessionHandle, key.identifier(),
-                    (SGD_UCHAR*)key.password()->data(), (SGD_UINT32)key.password()->size());
-            if (getAccessRightCode != SDR_OK)
+            if (key.password()->size() != 0)
             {
-                m_sessionPool->ReturnSession(sessionHandle);
-                return getAccessRightCode;
+                SGD_RV getAccessRightCode =
+                    SDF_GetPrivateKeyAccessRight(sessionHandle, key.identifier(),
+                        (SGD_UCHAR*)key.password()->data(), (SGD_UINT32)key.password()->size());
+                if (getAccessRightCode != SDR_OK)
+                {
+                    m_sessionPool->ReturnSession(sessionHandle);
+                    return getAccessRightCode;
+                }
             }
+            ECCSignature eccSignature;
             signCode = SDF_InternalSign_ECC(sessionHandle, key.identifier(), (SGD_UCHAR*)digest,
-                digestLen, (ECCSignature*)signature);
-            SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.identifier());
+                digestLen, &eccSignature);
+            memcpy(signature, eccSignature.r + 32, 32);
+            memcpy(signature + 32, eccSignature.s + 32, 32);
+            if (key.password()->size() != 0)
+            {
+                SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.identifier());
+            }
         }
-        else
+        else     
         {
             ECCrefPrivateKey eccKey;
-            eccKey.bits = 32 * 8;
-            memcpy(eccKey.D, key.privateKey()->data(), 32);
+            eccKey.bits = 256;
+            memcpy(eccKey.D + 32, key.privateKey()->data(), 32);
+            ECCSignature eccSignature;
             signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest,
-                digestLen, (ECCSignature*)signature);
+                digestLen, &eccSignature);
+            memcpy(signature, eccSignature.r + 32, 32);
+            memcpy(signature + 32, eccSignature.s + 32, 32);
         }
         if (signCode != SDR_OK)
         {
@@ -163,18 +168,18 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
         SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2_3, keyLen, &pk, &sk);
         if (result != SDR_OK)
         {
+            cout << "KeyGen SDF_GenerateKeyPair_ECC error: " << GetErrorMessage(result) << endl;
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
-
+       
         std::shared_ptr<const std::vector<byte>> privKey =
-            std::make_shared<const std::vector<byte>>((byte*)sk.D, (byte*)sk.D + 32);
+        std::make_shared<const std::vector<byte>>((byte*)sk.D+32, (byte*)sk.D + 64);
 
         std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
         pubKey->reserve(32 + 32);
-        pubKey->insert(pubKey->end(), (byte*)pk.x, (byte*)pk.x + 32);
-        pubKey->insert(pubKey->end(), (byte*)pk.y, (byte*)pk.y + 32);
-
+        pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
+        pubKey->insert(pubKey->end(), (byte*)pk.y+32, (byte*)pk.y + 64);
         key->setPrivateKey(privKey);
         key->setPublicKey(pubKey);
         m_sessionPool->ReturnSession(sessionHandle);
@@ -275,10 +280,11 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
         {
             return SDR_NOTSUPPORT;
         }
+        
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
         ECCSignature eccSignature;
-        memcpy(eccSignature.r, signature, 32);
-        memcpy(eccSignature.s, signature + 32, 32);
+        memcpy(eccSignature.r+32, signature, 32);
+        memcpy(eccSignature.s+32, signature + 32, 32);
         SGD_RV code;
 
         if (key.isInternalKey())
@@ -289,9 +295,9 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
         else
         {
             ECCrefPublicKey eccKey;
-            eccKey.bits = 32 * 8;
-            memcpy(eccKey.x, key.publicKey()->data(), 32);
-            memcpy(eccKey.y, key.publicKey()->data() + 32, 32);
+            eccKey.bits = 256;
+            memcpy(eccKey.x+32, key.publicKey()->data(), 32);
+            memcpy(eccKey.y+32, key.publicKey()->data() + 32, 32);
             code = SDF_ExternalVerify_ECC(
                 sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest, digestLen, &eccSignature);
         }
@@ -328,12 +334,10 @@ unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key& key, AlgorithmType 
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
-
         std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
         pubKey->reserve(32 + 32);
-        pubKey->insert(pubKey->end(), (byte*)pk.x, (byte*)pk.x + 32);
-        pubKey->insert(pubKey->end(), (byte*)pk.y, (byte*)pk.y + 32);
-
+        pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
+        pubKey->insert(pubKey->end(), (byte*)pk.y+32, (byte*)pk.y + 64);
         key.setPublicKey(pubKey);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
@@ -529,7 +533,7 @@ SDFCryptoResult SignWithInternalKey(
         {
             unsigned char* unsignedPwd = reinterpret_cast<unsigned char*>(password);
             std::shared_ptr<const vector<byte>> pwd(
-                new const vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + 32));
+                new const vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + strlen(password)));
             Key key = Key(keyIndex, pwd);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             std::vector<byte> signature(64);

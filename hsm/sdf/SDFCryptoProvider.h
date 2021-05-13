@@ -39,7 +39,6 @@ class SessionPool
 public:
     SessionPool(int size, void* deviceHandle);
     virtual ~SessionPool();
-    void SetPoolSize(int poolSize);
     void* GetSession();
     void ReturnSession(void* session);
 
