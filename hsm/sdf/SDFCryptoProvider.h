@@ -112,18 +112,13 @@ public:
         unsigned int* plantextLen) override;
 
     /**
-     * Make sm3 hash with z value
-     */
-    unsigned int HashWithZ(Key* key, AlgorithmType algorithm, unsigned char const* zValue,
-        unsigned int zValueLen, unsigned char const* message, unsigned int messageLen,
-        unsigned char* digest, unsigned int* digestLen) override;
-
-    /**
      *  Get public key of an internal key
      */
     unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm) override;
 
     char* GetErrorMessage(unsigned int code) override;
+    static const unsigned int SM2_BITS;
+    static const std::string SM2_USER_ID;
 };
 
 struct SDFCryptoResult
@@ -146,8 +141,6 @@ SDFCryptoResult VerifyWithInternalKey(
     unsigned int keyIndex, AlgorithmType algorithm, char const* digest, char const* signature);
 SDFCryptoResult Hash(char* key, AlgorithmType algorithm, char const* message);
 SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType algorithm);
-
-SDFCryptoResult HashWithZ(char* key, AlgorithmType algorithm, char const* message);
 SDFCryptoResult makeResult(char* signature, char* publicKey, char* privateKey, bool result,
     char* hash, unsigned int code, char*);
 char* sdfToHex(const std::vector<byte>& data);
