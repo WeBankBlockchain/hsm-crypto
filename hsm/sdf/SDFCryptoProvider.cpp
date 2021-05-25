@@ -12,6 +12,7 @@
 #include<condition_variable>
 using namespace std;
 using namespace hsm;
+#define SM2_BITS 256;
 namespace hsm
 {
 namespace sdf
@@ -132,7 +133,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
         else     
         {
             ECCrefPrivateKey eccKey;
-            eccKey.bits = 256;
+            eccKey.bits = SM2_BITS;
             memcpy(eccKey.D + 32, key.privateKey()->data(), 32);
             ECCSignature eccSignature;
             signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest,
@@ -162,7 +163,7 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     {
         ECCrefPublicKey pk;
         ECCrefPrivateKey sk;
-        SGD_UINT32 keyLen = 256;
+        SGD_UINT32 keyLen = SM2_BITS;
 
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
         SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2_3, keyLen, &pk, &sk);
@@ -295,7 +296,7 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
         else
         {
             ECCrefPublicKey eccKey;
-            eccKey.bits = 256;
+            eccKey.bits = SM2_BITS;
             memcpy(eccKey.x+32, key.publicKey()->data(), 32);
             memcpy(eccKey.y+32, key.publicKey()->data() + 32, 32);
             code = SDF_ExternalVerify_ECC(
