@@ -2,7 +2,7 @@
 #include <hsm/sdf/SDFCryptoProvider.h>
 #include <iostream>
 #include <string>
-#include<thread>
+#include <thread>
 
 using namespace std;
 using namespace hsm;
@@ -11,14 +11,25 @@ using namespace hsm::sdf;
 
 void callCard(int inum)
 {
-	SDFCryptoResult result = KeyGen(SM2);
+    for( int i = 0; i < inum; i++){
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        Key key = Key();
+        unsigned int code = provider.KeyGen(SM2, &key);
+        if (code != SDR_OK)
+        {
+            cout << provider.GetErrorMessage(code) << endl;
+        }
+    }
 }
 
 int main(int, const char* argv[]){
     // Crypto provider 测试
-    cout << "**************Begin Test, bash test-sdf-crypto [loopRound]************************"<<endl;
-    SDFCryptoProvider& provider=SDFCryptoProvider::GetInstance();
-    size_t loopRound = atoi(argv[1]);
+    cout << "**************Begin Test, bash test-sdf-crypto [sessionPoolSize] "
+            "[loopRound]************************"
+         << endl;
+    size_t sessionPoolRound = atoi(argv[1]);
+    size_t loopRound = atoi(argv[2]);
+    SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
 
     // Make hash
     cout << "**************Make SM3 Hash************************"<<endl;
@@ -38,8 +49,8 @@ int main(int, const char* argv[]){
         cout << "Standard : " << sdfToHex(bHashStdResultVector) << endl;
     }
     
-    result = KeyGen(SM2);
     cout << "****KeyGen****" << endl;
+    result = KeyGen(SM2);
     if (result.sdfErrorMessage != nullptr){
         cout << "Get error : " << result.sdfErrorMessage <<endl;
     }else{
@@ -47,8 +58,11 @@ int main(int, const char* argv[]){
         cout << "Get private key : " << result.privateKey << endl;
     }
 
-    SDFCryptoResult signResult = Sign(result.privateKey, SM2, sdfToHex(bHashStdResultVector));
+    SDFCryptoResult signResult;
+    SDFCryptoResult verifyResult;
+
     cout << "****Sign****" << endl;
+    signResult = Sign(result.privateKey, SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
     }else{
@@ -56,7 +70,7 @@ int main(int, const char* argv[]){
     }
 
     cout << "****Verify****" << endl;
-    SDFCryptoResult verifyResult = Verify(
+    verifyResult = Verify(
         result.publicKey, SM2, hsm::sdf::sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << verifyResult.sdfErrorMessage <<endl;
@@ -64,8 +78,8 @@ int main(int, const char* argv[]){
         cout << "Get verify result: " << verifyResult.result << endl;
     }
 
-    signResult = SignWithInternalKey(1, "123456", SM2, sdfToHex(bHashStdResultVector));
     cout << "****SignInternalKey****" << endl;
+    signResult = SignWithInternalKey(1, "", SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
     }else{
@@ -82,7 +96,7 @@ int main(int, const char* argv[]){
     }
 
     cout << "*****ExportInternalPublicKey****" << endl;
-    SDFCryptoResult exportResult = ExportInternalPublicKey(2, SM2);
+    SDFCryptoResult exportResult = ExportInternalPublicKey(1, SM2);
     cout << "Export public key: " << exportResult.publicKey << endl;
 
 
@@ -91,10 +105,14 @@ int main(int, const char* argv[]){
             0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10};
     std::shared_ptr<const std::vector<byte>> pbKeyValue =
         std::make_shared<const std::vector<byte>>(pkv);
+    std::vector<byte> originIV = {0xeb, 0xee, 0xc5, 0x68, 0x58, 0xe6, 0x04, 0xd8, 0x32, 0x7b, 0x9b,
+        0x3c, 0x10, 0xc9, 0x0c, 0xa7};
     std::vector<byte> pbIV = {0xeb,0xee,0xc5,0x68,0x58,0xe6,0x04,0xd8,0x32,0x7b,0x9b,0x3c,0x10,0xc9,0x0c,0xa7};
 	std::vector<byte> pbPlainText = {0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,0xfe,0xdc,0xba,0x98,0x76,0x54,0x32,0x10,0x29,0xbe,0xe1,0xd6,0x52,0x49,0xf1,0xe9,0xb3,0xdb,0x87,0x3e,0x24,0x0d,0x06,0x47};
 	std::vector<byte> pbCipherText = {0x3f,0x1e,0x73,0xc3,0xdf,0xd5,0xa1,0x32,0x88,0x2f,0xe6,0x9d,0x99,0x6c,0xde,0x93,0x54,0x99,0x09,0x5d,0xde,0x68,0x99,0x5b,0x4d,0x70,0xf2,0x30,0x9f,0x2e,0xf1,0xb7};
-    
+
+    cout << "Plain Text: " << sdfToHex(pbPlainText) << endl;
+    cout << "IV        : " << sdfToHex(pbIV) << endl;
     Key key = Key();
     key.setSymmetricKey(pbKeyValue);
     unsigned int cypherLen;
@@ -105,28 +123,30 @@ int main(int, const char* argv[]){
       cout << "Failed!!" <<endl;
       cout << provider.GetErrorMessage(encryptCode) <<endl;
     } else {
-        cout << "Result: " << sdfToHex(cypher) << endl;
-        cout << "Stand : " << sdfToHex(pbCipherText) << endl;
+        cout << "Encrypt Result  : " << sdfToHex(cypher) << endl;
+        cout << "Standard Result : " << sdfToHex(pbCipherText) << endl;
     }
 
 
     cout << "*****SM4 Decrypt****" << endl;
+    cout << "Cipher Text: " << sdfToHex(pbPlainText) << endl;
+    cout << "IV         : " << sdfToHex(originIV) << endl;
     std::vector<byte> plain(32);
     unsigned int plainlen;
     unsigned int decryptoCode = provider.Decrypt(
-        key, SM4_CBC, pbIV.data(), pbCipherText.data(), 32, plain.data(), &plainlen);
+        key, SM4_CBC, originIV.data(), pbCipherText.data(), 32, plain.data(), &plainlen);
     if (decryptoCode != SDR_OK) {
       cout << "Failed!!" <<endl;
       cout << provider.GetErrorMessage(decryptoCode) <<endl;
     } else {
-        cout << "Result: " << sdfToHex(plain) << endl;
-        cout << "Stand : " << sdfToHex(pbPlainText) << endl;
+        cout << "Decrypt Result  : " << sdfToHex(plain) << endl;
+        cout << "Standard Result : " << sdfToHex(pbPlainText) << endl;
     }
-
+    cout << "******Prallel test******" << endl;
     vector<thread> callCardThread;
-	for (int i = 0; i < loopRound; i++)
-	{
-		callCardThread.push_back(thread(callCard,i)); 
+    for (int i = 0; i < sessionPoolRound; i++)
+    {
+        callCardThread.push_back(thread(callCard, loopRound));
     }
     for (auto iter = callCardThread.begin(); iter!= callCardThread.end(); iter++)
 	{

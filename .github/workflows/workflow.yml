@@ -28,4 +28,4 @@ jobs:
         run: |
           mkdir build,
           cd build,
-          cmake .. && make .
+          cmake .. -DBUILD_SDF=off && make .

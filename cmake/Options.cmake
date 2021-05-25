@@ -10,8 +10,14 @@ macro(add_option O DEF)
     endif()
 endmacro()
 
-add_option(BUILD_SDF OFF)
+add_option(BUILD_SDF ON)
 add_option(BUILD_SHARED_LIBS OFF)
+
+if(BUILD_SDF)
+    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+        message(FATAL "${CMAKE_SYSTEM_NAME} ${ARCHITECTURE} does not support by hardware secure module")
+    endif()
+endif()
 
 macro(print_config NAME)
 message("")
