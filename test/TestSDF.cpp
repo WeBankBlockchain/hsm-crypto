@@ -48,7 +48,7 @@ int main(int, const char* argv[]){
 
         cout << "Standard : " << sdfToHex(bHashStdResultVector) << endl;
     }
-    
+
     cout << "****KeyGen****" << endl;
     result = KeyGen(SM2);
     if (result.sdfErrorMessage != nullptr){
@@ -57,11 +57,20 @@ int main(int, const char* argv[]){
         cout << "Get public key : " << result.publicKey << endl;
         cout << "Get private key : " << result.privateKey << endl;
     }
-
-    SDFCryptoResult signResult;
-    SDFCryptoResult verifyResult;
+    
+    cout << "**************Make SM2_SM3 Hash************************"<<endl;
+    SDFCryptoResult sm2_sm3_result = Hash(result.publicKey, SM3, sdfToHex(bHashVector));
+    if (sm2_sm3_result.sdfErrorMessage != nullptr)
+    {
+        cout << "Get error : " << sm2_sm3_result.sdfErrorMessage << endl;
+    }
+    else
+    {
+        cout << "SM2_SM3 : " << sm2_sm3_result.hash << endl;
+    }
 
     cout << "****Sign****" << endl;
+    SDFCryptoResult signResult;
     signResult = Sign(result.privateKey, SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
@@ -70,6 +79,7 @@ int main(int, const char* argv[]){
     }
 
     cout << "****Verify****" << endl;
+    SDFCryptoResult verifyResult;
     verifyResult = Verify(
         result.publicKey, SM2, hsm::sdf::sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){

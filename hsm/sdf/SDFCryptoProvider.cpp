@@ -12,7 +12,7 @@
 #include<condition_variable>
 using namespace std;
 using namespace hsm;
-#define SM2_BITS 256;
+
 namespace hsm
 {
 namespace sdf
@@ -56,7 +56,8 @@ void SessionPool::ReturnSession(void* session)
     m_pool.push_back(session);
     cv.notify_all();
 }
-
+const unsigned int SDFCryptoProvider::SM2_BITS = 256;
+const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
 SDFCryptoProvider::SDFCryptoProvider()
 {
     SGD_RV deviceStatus = SDF_OpenDevice(&m_deviceHandle);
@@ -109,7 +110,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
         SGD_RV signCode;
         if (key.isInternalKey())
         {
-            if (key.password()->size() != 0)
+            if (key.password() != NULL && key.password()->size() != 0)
             {
                 SGD_RV getAccessRightCode =
                     SDF_GetPrivateKeyAccessRight(sessionHandle, key.identifier(),
@@ -125,7 +126,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
                 digestLen, &eccSignature);
             memcpy(signature, eccSignature.r + 32, 32);
             memcpy(signature + 32, eccSignature.s + 32, 32);
-            if (key.password()->size() != 0)
+            if (key.password() != NULL && key.password()->size() != 0)
             {
                 SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.identifier());
             }
@@ -169,14 +170,12 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
         SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2_3, keyLen, &pk, &sk);
         if (result != SDR_OK)
         {
-            cout << "KeyGen SDF_GenerateKeyPair_ECC error: " << GetErrorMessage(result) << endl;
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
        
         std::shared_ptr<const std::vector<byte>> privKey =
         std::make_shared<const std::vector<byte>>((byte*)sk.D+32, (byte*)sk.D + 64);
-
         std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
         pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
@@ -191,57 +190,30 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     }
 }
 
-unsigned int SDFCryptoProvider::Hash(Key*, AlgorithmType algorithm, unsigned char const* message,
-    unsigned int messageLen, unsigned char* digest, unsigned int* digestLen)
+unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
+    unsigned char const* message, unsigned int messageLen, unsigned char* digest,
+    unsigned int* digestLen)
 {
     switch (algorithm)
     {
     case SM3:
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
-        if (code != SDR_OK)
+        SGD_RV code;
+        if (key == nullptr)
         {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
+            code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
         }
-
-        code = SDF_HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
-        if (code != SDR_OK)
+        else
         {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
+            ECCrefPublicKey eccKey;
+            eccKey.bits = SM2_BITS;
+            memcpy(eccKey.x + 32, key->publicKey()->data(), 32);
+            memcpy(eccKey.y + 32, key->publicKey()->data() + 32, 32);
+            code = SDF_HashInit(sessionHandle, SGD_SM3, &eccKey,
+                sdfFromHex((char*)SM2_USER_ID.c_str()).data(),
+                getHexByteLen((char*)SM2_USER_ID.c_str()));
         }
-
-        code = SDF_HashFinal(sessionHandle, digest, digestLen);
-        if (code != SDR_OK)
-        {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
-        }
-        m_sessionPool->ReturnSession(sessionHandle);
-        return code;
-    }
-    default:
-        return SDR_ALGNOTSUPPORT;
-    }
-}
-unsigned int SDFCryptoProvider::HashWithZ(Key*, AlgorithmType algorithm,
-    unsigned char const* zValue, unsigned int zValueLen, unsigned char const* message,
-    unsigned int messageLen, unsigned char* digest, unsigned int* digestLen)
-{
-    switch (algorithm)
-    {
-    case SM3:
-    {
-        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
-        if (code != SDR_OK)
-        {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
-        }
-        code = SDF_HashUpdate(sessionHandle, (SGD_UCHAR*)zValue, zValueLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -494,6 +466,11 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
     case SM2:
         try
         {
+            if (privateKey == nullptr || digest == nullptr)
+            {
+                return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_NOTSUPPORT,
+                    (char*)"private key and digest can not be null. Please check your parameters.");
+            }
             Key key = Key();
             const vector<byte> sk = sdfFromHex(privateKey);
             std::shared_ptr<const vector<byte>> privKey =
@@ -532,6 +509,11 @@ SDFCryptoResult SignWithInternalKey(
     case SM2:
         try
         {
+            if (keyIndex < 1)
+            {
+                return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_NOTSUPPORT,
+                    (char*)"keyIndex should be larger than 1. Please check your parameters.");
+            }
             unsigned char* unsignedPwd = reinterpret_cast<unsigned char*>(password);
             std::shared_ptr<const vector<byte>> pwd(
                 new const vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + strlen(password)));
@@ -568,6 +550,11 @@ SDFCryptoResult Verify(
     case SM2:
         try
         {
+            if (publicKey == nullptr || digest == nullptr || signature == nullptr)
+            {
+                return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_NOTSUPPORT,
+            (char*)"prublicKey, digest, signature can not be null. Please check your parameters.");
+            }
             Key key = Key();
             std::vector<byte> pk = sdfFromHex((char*)publicKey);
             std::shared_ptr<const vector<byte>> pubKey =
@@ -625,38 +612,26 @@ SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* messa
         {
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             bool isValid;
-            // unsigned char hashResult[32];
             vector<byte> hashResult(32);
             unsigned int len;
-            unsigned int code = provider.Hash(nullptr, algorithm, sdfFromHex((char*)message).data(),
-                getHexByteLen((char*)message), hashResult.data(), &len);
-            return makeResult(
-                nullptr, nullptr, nullptr, false, sdfToHex(hashResult), code, nullptr);
-        }
-        catch (const char* e)
-        {
-            return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_OK, (char*)e);
-        }
-    default:
-        return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_NOTSUPPORT,
-            (char*)"algrithum not support yet");
-    }
-}
-
-SDFCryptoResult HashWithZ(char* key, AlgorithmType algorithm, char const* message)
-{
-    switch (algorithm)
-    {
-    case SM3:
-        try
-        {
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
-            bool isValid;
-            // unsigned char hashResult[32];
-            vector<byte> hashResult(32);
-            unsigned int len;
-            unsigned int code = provider.Hash(nullptr, algorithm, sdfFromHex((char*)message).data(),
-                getHexByteLen((char*)message), hashResult.data(), &len);
+            unsigned int code;
+            if (publicKey != nullptr)
+            {
+                // if publicKey != nullptr, then hash with z value.
+                Key key = Key();
+                std::vector<byte> pk = sdfFromHex((char*)publicKey);
+                std::shared_ptr<const vector<byte>> pubKey =
+                    std::make_shared<const std::vector<byte>>(
+                        (byte*)pk.data(), (byte*)pk.data() + 64);
+                key.setPublicKey(pubKey);
+                code = provider.Hash(&key, algorithm, sdfFromHex((char*)message).data(),
+                    getHexByteLen((char*)message), hashResult.data(), &len);
+            }
+            else
+            {
+                code = provider.Hash(nullptr, algorithm, sdfFromHex((char*)message).data(),
+                    getHexByteLen((char*)message), hashResult.data(), &len);
+            }
             return makeResult(
                 nullptr, nullptr, nullptr, false, sdfToHex(hashResult), code, nullptr);
         }

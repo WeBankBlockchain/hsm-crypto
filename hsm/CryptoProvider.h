@@ -108,13 +108,6 @@ public:
         unsigned int* plantextLen) = 0;
 
     /**
-     * Make sm3 hash with z value
-     */
-    virtual unsigned int HashWithZ(Key* key, AlgorithmType algorithm, unsigned char const* zValue,
-        unsigned int zValueLen, unsigned char const* message, unsigned int messageLen,
-        unsigned char* digest, unsigned int* digestLen) = 0;
-
-    /**
      *  Get public key of an internal key
      */
     virtual unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm) = 0;
