@@ -135,7 +135,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
         {
             ECCrefPrivateKey eccKey;
             eccKey.bits = SM2_BITS;
-            memcpy(eccKey.D + 32, key.privateKey()->data(), 32);
+            memcpy(eccKey.K + 32, key.privateKey()->data(), 32);
             ECCSignature eccSignature;
             signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest,
                 digestLen, &eccSignature);
@@ -173,9 +173,9 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
-       
+
         std::shared_ptr<const std::vector<byte>> privKey =
-        std::make_shared<const std::vector<byte>>((byte*)sk.D+32, (byte*)sk.D + 64);
+            std::make_shared<const std::vector<byte>>((byte*)sk.K + 32, (byte*)sk.K + 64);
         std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
         pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
