@@ -210,9 +210,7 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x + 32, key->publicKey()->data(), 32);
             memcpy(eccKey.y + 32, key->publicKey()->data() + 32, 32);
-            code = SDF_HashInit(sessionHandle, SGD_SM3, &eccKey,
-                sdfFromHex((char*)SM2_USER_ID.c_str()).data(),
-                getHexByteLen((char*)SM2_USER_ID.c_str()));
+            code = SDF_HashInit(sessionHandle, SGD_SM3, &eccKey,(unsigned char*)SM2_USER_ID.c_str(),16);
         }
         if (code != SDR_OK)
         {

@@ -1,8 +1,24 @@
 #!/bin/bash
 mkdir -p build
 cd build
-cmake .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off
-cmake3 .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off
+get_arch=`arch`
+C="CentOS"
+U="Ubuntu"
+if [[ $get_arch =~ "x86_64" ]];then
+    FILE_EXE=/etc/redhat-release
+    if [ -f "$FILE_EXE" ];then
+        if [[ `cat /etc/redhat-release` =~ $C ]];then
+            cmake3 .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off   
+        fi
+    fi
+    cmake .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off
+elif [[ $get_arch =~ "aarch64" ]];then
+    cmake .. -DBUILD_SDF=on -DBUILD_SHARED_LIBS=off
+elif [[ $get_arch =~ "mips64" ]];then
+    echo "this is mips64, not support yet"
+else
+    echo "${get_arch} not support yet"
+fi
 make
 cd ..
 mkdir -p include
