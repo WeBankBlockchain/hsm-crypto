@@ -89,7 +89,7 @@ SDFCryptoProvider::~SDFCryptoProvider()
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance()
 {
-    return GetInstance(50);
+    return GetInstance(10);
 }
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize)
