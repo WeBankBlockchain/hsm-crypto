@@ -2,14 +2,15 @@
 #include "../Common.h"
 #include "csmsds.h"
 #include <stdio.h>
+#include <condition_variable>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <list>
 #include <memory>
 #include <string>
 #include <vector>
-#include<condition_variable>
 using namespace std;
 using namespace hsm;
 
@@ -20,42 +21,36 @@ namespace sdf
 SessionPool::SessionPool(int size, void* deviceHandle)
 {
     if(size <= 0){
-        throw "HSM device session pool size should be bigger than 0";
+        throw std::runtime_error("HSM device session pool size should be bigger than 0");
     }
     m_size = size;
     m_deviceHandle = deviceHandle;
-    for (size_t n = 0; n < m_size; n++)
-    {
-        SGD_HANDLE sessionHandle;
-        SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
-        if (sessionStatus != SDR_OK)
-        {
-            throw sessionStatus;
-        }
-        m_pool.push_back(sessionHandle);
-    }
-}
-SessionPool::~SessionPool()
-{
-    for(auto session : m_pool) {  
-        SDF_CloseSession(session); 
-    } 
+    m_available_session_count = size;
 }
 void* SessionPool::GetSession()
 {
     std::unique_lock<std::mutex> l(mtx);
-    cv.wait(l, [this]()->bool { return !m_pool.empty(); });
-    SGD_HANDLE session = m_pool.front();
-    m_pool.pop_front();
-    return session;
+    cv.wait(l, [this]() -> bool { return !m_available_session_count == 0; });
+    SGD_HANDLE sessionHandle;
+    SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
+    if (sessionStatus != SDR_OK)
+    {
+        throw std::runtime_error(
+            "Cannot open session, error: " + getSdfErrorMessage(sessionStatus));
+    }
+    m_available_session_count--;
+    return sessionHandle;
 }
 
 void SessionPool::ReturnSession(void* session)
 {
     std::unique_lock<std::mutex> l(mtx);
-    m_pool.push_back(session);
+    SDF_CloseSession(session);
+    int i = 1;
+    m_available_session_count++;
     cv.notify_all();
 }
+
 const unsigned int SDFCryptoProvider::SM2_BITS = 256;
 const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
 SDFCryptoProvider::SDFCryptoProvider()
@@ -63,7 +58,7 @@ SDFCryptoProvider::SDFCryptoProvider()
     SGD_RV deviceStatus = SDF_OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
-        throw deviceStatus;
+        throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
     m_sessionPool = new SessionPool(50, m_deviceHandle);
 }
@@ -73,7 +68,7 @@ SDFCryptoProvider::SDFCryptoProvider(int sessionPoolSize)
     SGD_RV deviceStatus = SDF_OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
-        throw deviceStatus;
+        throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
     m_sessionPool = new SessionPool(sessionPoolSize, m_deviceHandle);
 }
@@ -89,7 +84,7 @@ SDFCryptoProvider::~SDFCryptoProvider()
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance()
 {
-    return GetInstance(50);
+    return GetInstance(10);
 }
 
 SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize)
@@ -376,56 +371,8 @@ unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm,
 
 char* SDFCryptoProvider::GetErrorMessage(unsigned int code)
 {
-    switch (code)
-    {
-    case SDR_OK:
-        return (char*)"success";
-    case SDR_UNKNOWERR:
-        return (char*)"unknown error";
-    case SDR_NOTSUPPORT:
-        return (char*)"not support";
-    case SDR_COMMFAIL:
-        return (char*)"communication failed";
-    case SDR_OPENDEVICE:
-        return (char*)"failed open device";
-    case SDR_OPENSESSION:
-        return (char*)"failed open session";
-    case SDR_PARDENY:
-        return (char*)"permission deny";
-    case SDR_KEYNOTEXIST:
-        return (char*)"key not exit";
-    case SDR_ALGNOTSUPPORT:
-        return (char*)"algorithm not support";
-    case SDR_ALGMODNOTSUPPORT:
-        return (char*)"algorithm not support mode";
-    case SDR_PKOPERR:
-        return (char*)"public key calculate error";
-    case SDR_SKOPERR:
-        return (char*)"private key calculate error";
-    case SDR_SIGNERR:
-        return (char*)"signature error";
-    case SDR_VERIFYERR:
-        return (char*)"verify signature error";
-    case SDR_SYMOPERR:
-        return (char*)"symmetric crypto calculate error";
-    case SDR_STEPERR:
-        return (char*)"step error";
-    case SDR_FILESIZEERR:
-        return (char*)"file size error";
-    case SDR_FILENOEXIST:
-        return (char*)"file not exist";
-    case SDR_FILEOFSERR:
-        return (char*)"file offset error";
-    case SDR_KEYTYPEERR:
-        return (char*)"key type not right";
-    case SDR_KEYERR:
-        return (char*)"key error";
-    default:
-        std::string err = "unkown code " + std::to_string(code);
-        char* c_err = new char[err.length() + 1];
-        strcpy(c_err, err.c_str());
-        return c_err;
-    }
+    string errorMessage = getSdfErrorMessage(code);
+    return (char*)errorMessage.c_str();
 }
 
 SDFCryptoResult KeyGen(AlgorithmType algorithm)
@@ -723,7 +670,7 @@ std::vector<byte> sdfFromHex(char* hexString)
         if (h != -1)
             ret.push_back(h);
         else
-            throw "bad hex string";
+            throw std::runtime_error("bad hex string");
     }
     for (unsigned i = s; i < len; i += 2)
     {
@@ -736,7 +683,7 @@ std::vector<byte> sdfFromHex(char* hexString)
         }
         else
         {
-            throw "bad hex string";
+            throw std::runtime_error("bad hex string");
         }
     }
     return ret;
@@ -796,6 +743,57 @@ int PrintData(
     printf("\n");
 
     return 0;
+}
+
+string getSdfErrorMessage(unsigned int code)
+{
+    switch (code)
+    {
+    case SDR_OK:
+        return "success";
+    case SDR_UNKNOWERR:
+        return "unknown error";
+    case SDR_NOTSUPPORT:
+        return "not support";
+    case SDR_COMMFAIL:
+        return "communication failed";
+    case SDR_OPENDEVICE:
+        return "failed open device";
+    case SDR_OPENSESSION:
+        return "failed open session";
+    case SDR_PARDENY:
+        return "permission deny";
+    case SDR_KEYNOTEXIST:
+        return "key not exit";
+    case SDR_ALGNOTSUPPORT:
+        return "algorithm not support";
+    case SDR_ALGMODNOTSUPPORT:
+        return "algorithm not support mode";
+    case SDR_PKOPERR:
+        return "public key calculate error";
+    case SDR_SKOPERR:
+        return "private key calculate error";
+    case SDR_SIGNERR:
+        return "signature error";
+    case SDR_VERIFYERR:
+        return "verify signature error";
+    case SDR_SYMOPERR:
+        return "symmetric crypto calculate error";
+    case SDR_STEPERR:
+        return "step error";
+    case SDR_FILESIZEERR:
+        return "file size error";
+    case SDR_FILENOEXIST:
+        return "file not exist";
+    case SDR_FILEOFSERR:
+        return "file offset error";
+    case SDR_KEYTYPEERR:
+        return "key type not right";
+    case SDR_KEYERR:
+        return "key error";
+    default:
+        return "unkown code " + std::to_string(code);
+    }
 }
 
 }  // namespace sdf

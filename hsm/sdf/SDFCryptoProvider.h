@@ -38,14 +38,13 @@ class SessionPool
 {
 public:
     SessionPool(int size, void* deviceHandle);
-    virtual ~SessionPool();
     void* GetSession();
     void ReturnSession(void* session);
 
 private:
     void* m_deviceHandle;
     size_t m_size;
-    std::list<void*> m_pool;
+    size_t m_available_session_count;
     std::mutex mtx;
     std::condition_variable cv;
 };
@@ -148,6 +147,6 @@ std::vector<byte> sdfFromHex(char* hexString);
 int fromHexChar(char _i);
 unsigned int getHexByteLen(char* hexString);
 int PrintData(char*, unsigned char*, unsigned int, unsigned int);
-
+std::string getSdfErrorMessage(unsigned int code);
 }  // namespace sdf
 }  // namespace hsm

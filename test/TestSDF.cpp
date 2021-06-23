@@ -1,5 +1,6 @@
 #include "csmsds.h"
 #include <hsm/sdf/SDFCryptoProvider.h>
+#include <exception>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -29,6 +30,15 @@ int main(int, const char* argv[]){
          << endl;
     size_t sessionPoolRound = atoi(argv[1]);
     size_t loopRound = atoi(argv[2]);
+    try
+    {
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
+    }
+    catch (const std::exception& e)
+    {
+        cout << "error occured, info: " << e.what() << endl;
+        exit(1);
+    }
     SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
 
     // Make hash
