@@ -44,7 +44,7 @@ public:
 private:
     void* m_deviceHandle;
     size_t m_size;
-    std::list<int> m_pool;
+    size_t m_pool_size;
     std::mutex mtx;
     std::condition_variable cv;
 };
