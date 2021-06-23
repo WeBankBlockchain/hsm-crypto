@@ -25,12 +25,12 @@ SessionPool::SessionPool(int size, void* deviceHandle)
     }
     m_size = size;
     m_deviceHandle = deviceHandle;
-    m_pool_size = size;
+    m_available_session_count = size;
 }
 void* SessionPool::GetSession()
 {
     std::unique_lock<std::mutex> l(mtx);
-    cv.wait(l, [this]() -> bool { return !m_pool_size == 0; });
+    cv.wait(l, [this]() -> bool { return !m_available_session_count == 0; });
     SGD_HANDLE sessionHandle;
     SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
     if (sessionStatus != SDR_OK)
@@ -38,7 +38,7 @@ void* SessionPool::GetSession()
         throw std::runtime_error(
             "Cannot open session, error: " + getSdfErrorMessage(sessionStatus));
     }
-    m_pool_size--;
+    m_available_session_count--;
     return sessionHandle;
 }
 
@@ -47,7 +47,7 @@ void SessionPool::ReturnSession(void* session)
     std::unique_lock<std::mutex> l(mtx);
     SDF_CloseSession(session);
     int i = 1;
-    m_pool_size++;
+    m_available_session_count++;
     cv.notify_all();
 }
 
