@@ -15,9 +15,9 @@ find_library(SWSDS swsds /usr/lib)
 if(NOT SWSDS)
     message(FATAL " Can not find library libswsds.so under /usr/lib, please make sure you have a crypto PCI card on your machine, as well as the the driver and libraries are installed.")
 endif()
-find_file(SWSDS_H csmsds.h /usr/include)
+find_file(SWSDS_H swsds.h /usr/include)
 if(NOT SWSDS_H)
-    message(FATAL " Can not find csmsds.h under /usr/include, please make sure you have a crypto PCI card on your machine, as well as the the driver and libraries are installed.")
+    message(FATAL " Can not find swsds.h under /usr/include, please make sure you have a crypto PCI card on your machine, as well as the the driver and libraries are installed.")
 endif()
 
 
