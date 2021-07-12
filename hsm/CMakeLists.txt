@@ -5,7 +5,8 @@ if(BUILD_SDF)
 
     EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
     if("${CMAKE_HOST_SYSTEM_NAME}" MATCHES "Linux")
-    message(INFO "HSM SDF support ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} ")
+        message(INFO "HSM SDF support ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} ")
+    else()
         message(FATAL "HSM  SDF only support Linux, the ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} is not supported.")
     endif()
 
