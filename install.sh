@@ -27,4 +27,8 @@ cp hsm/CryptoProvider.h  include/
 cp hsm/Common.h include/
 cp hsm/sdf/SDFCryptoProvider.h  include/sdf/
 mkdir -p lib
-cp build/output/libsdf-crypto_arm.a lib/libsdf-crypto_arm.a
+if [[ $get_arch =~ "x86_64" ]];then
+    cp build/output/libsdf-crypto_x86.a lib/libsdf-crypto_x86.a
+else
+    cp build/output/libsdf-crypto_arm.a lib/libsdf-crypto_arm.a
+fi
