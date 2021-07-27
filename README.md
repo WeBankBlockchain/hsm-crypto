@@ -12,7 +12,7 @@ HSM-Crypto是一个C++实现的硬件加密模块（Hardware secure module），
 ```bash
 mkdir build
 cd build
-cmake .. -DBUILD_SHARED_LIBS=on -DBUILD_SDF=on
+cmake .. -DBUILD_SHARED_LIBS=on -DBUILD_SDF=on 
 make
 ```
 
@@ -25,6 +25,7 @@ make
 ```
 ## 运行测试
 
-```
-
+```bash
+./output/test-sdf-crypto 10 100
+# test-sdf-crypto [sessionPoolSize] [loopRound]
 ```
