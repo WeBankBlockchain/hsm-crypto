@@ -243,6 +243,30 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     }
 }
 
+unsigned int SDFCryptoProvider::HashInit(SGD_HANDLE sessionHandle, ECCrefPublicKey *pucPublicKey)
+{
+    SGD_RV code;
+    if (pucPublicKey == nullptr)
+    {
+        code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
+    }
+    else
+    {
+        code = SDF_HashInit(sessionHandle, SGD_SM3, pucPublicKey,(unsigned char*)SM2_USER_ID.c_str(),16);
+    }
+    return code;
+}
+
+unsigned int SDFCryptoProvider::HashUpdate(SGD_HANDLE sessionHandle, unsigned char* message, unsigned int messageLen)
+{
+    return SDF_HashUpdate(sessionHandle, message, messageLen);
+}
+
+unsigned int SDFCryptoProvider::HashFinal(SGD_HANDLE sessionHandle, unsigned char* digest, unsigned int* digestLen)
+{
+    return SDF_HashFinal(sessionHandle, digest, digestLen);
+}
+
 unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
     unsigned char const* message, unsigned int messageLen, unsigned char* digest,
     unsigned int* digestLen)
