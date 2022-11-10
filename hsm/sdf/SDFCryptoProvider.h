@@ -115,6 +115,8 @@ public:
      */
     unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm) override;
 
+    bool generateRandom(unsigned int randomLength, unsigned char* pucRandom);
+
     char* GetErrorMessage(unsigned int code) override;
     static const unsigned int SM2_BITS;
     static const std::string SM2_USER_ID;

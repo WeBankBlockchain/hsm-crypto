@@ -23,6 +23,21 @@ void callCard(int inum)
     }
 }
 
+int hextostr(const unsigned char* hex, unsigned int hlen, unsigned char* str)
+{
+    unsigned int len = hlen;
+    const unsigned char HexStr[]="0123456789ABCDEF";
+
+    while(len--)
+    {
+        *str++ = HexStr[(*hex)>>4];
+        *str++ = HexStr[(*hex)&0x0f];
+        hex++;
+    }
+
+    return (hlen<<1);
+}
+
 int main(int, const char* argv[]){
     // Crypto provider 测试
     cout << "**************Begin Test, bash test-sdf-crypto [sessionPoolSize] "
@@ -99,7 +114,7 @@ int main(int, const char* argv[]){
     }
 
     cout << "****SignInternalKey****" << endl;
-    signResult = SignWithInternalKey(1, "", SM2, sdfToHex(bHashStdResultVector));
+    signResult = SignWithInternalKey(1, "12345678", SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         cout << "Get error : " << signResult.sdfErrorMessage <<endl;
     }else{
@@ -162,6 +177,22 @@ int main(int, const char* argv[]){
         cout << "Decrypt Result  : " << sdfToHex(plain) << endl;
         cout << "Standard Result : " << sdfToHex(pbPlainText) << endl;
     }
+
+    cout << "*****generate Random Num****" << endl;
+    unsigned int randomLength = 64;
+    unsigned char ucRandom[1024+1] = {0};
+    unsigned char Rand1[1024+1] = {0};
+    if (provider.generateRandom(randomLength, ucRandom))
+    {
+        hextostr(ucRandom,64,Rand1);
+        cout << "generate random number success :" << Rand1 << endl;
+    } 
+    else
+    {
+        cout << "generate random number failed :" << endl;
+    }
+    
+
     cout << "******Prallel test******" << endl;
     vector<thread> callCardThread;
     for (int i = 0; i < sessionPoolRound; i++)
