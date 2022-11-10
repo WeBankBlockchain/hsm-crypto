@@ -857,6 +857,8 @@ std::string getSdfErrorMessage(unsigned int code)
         return "key type not right";
     case SDR_KEYERR:
         return "key error";
+    // case SDR_RANDERR:
+    //     return "generate random error";
     default:
         return "unkown code " + std::to_string(code);
     }
