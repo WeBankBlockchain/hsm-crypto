@@ -1,6 +1,5 @@
 #include "SDFCryptoProvider.h"
 #include "../Common.h"
-#include "gmt0018.h"
 #include <stdio.h>
 #include <condition_variable>
 #include <cstdlib>
@@ -184,6 +183,30 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     }
 }
 
+unsigned int SDFCryptoProvider::HashInit(SGD_HANDLE sessionHandle, ECCrefPublicKey *pucPublicKey)
+{
+    SGD_RV code;
+    if (pucPublicKey == nullptr)
+    {
+        code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
+    }
+    else
+    {
+        code = SDF_HashInit(sessionHandle, SGD_SM3, pucPublicKey,(unsigned char*)SM2_USER_ID.c_str(),16);
+    }
+    return code;
+}
+
+unsigned int SDFCryptoProvider::HashUpdate(SGD_HANDLE sessionHandle, unsigned char* message, unsigned int messageLen)
+{
+    return SDF_HashUpdate(sessionHandle, message, messageLen);
+}
+
+unsigned int SDFCryptoProvider::HashFinal(SGD_HANDLE sessionHandle, unsigned char* digest, unsigned int* digestLen)
+{
+    return SDF_HashFinal(sessionHandle, digest, digestLen);
+}
+
 unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
     unsigned char const* message, unsigned int messageLen, unsigned char* digest,
     unsigned int* digestLen)
@@ -196,7 +219,7 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
         SGD_RV code;
         if (key == nullptr)
         {
-            code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
+            code = HashInit(sessionHandle, nullptr);
         }
         else
         {
@@ -204,7 +227,7 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x + 32, key->publicKey()->data(), 32);
             memcpy(eccKey.y + 32, key->publicKey()->data() + 32, 32);
-            code = SDF_HashInit(sessionHandle, SGD_SM3, &eccKey,(unsigned char*)SM2_USER_ID.c_str(),16);
+            code = HashInit(sessionHandle, &eccKey);
         }
         if (code != SDR_OK)
         {
@@ -212,14 +235,14 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
             return code;
         }
 
-        code = SDF_HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
+        code = HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
             return code;
         }
 
-        code = SDF_HashFinal(sessionHandle, digest, digestLen);
+        code = HashFinal(sessionHandle, digest, digestLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
