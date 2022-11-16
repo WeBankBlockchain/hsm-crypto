@@ -186,7 +186,7 @@ int main(int, const char* argv[]){
     {
         hextostr(ucRandom,64,Rand1);
         cout << "generate random number success :" << Rand1 << endl;
-    } 
+    }
     else
     {
         cout << "generate random number failed :" << endl;
