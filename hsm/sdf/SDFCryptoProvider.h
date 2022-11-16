@@ -21,7 +21,6 @@
 #pragma once
 #include "../Common.h"
 #include "../CryptoProvider.h"
-#include "gmt0018.h"
 #include <stdio.h>
 #include <cstdlib>
 #include <cstring>
@@ -218,9 +217,6 @@ public:
      */
     unsigned int Hash(Key* key, AlgorithmType algorithm, unsigned char const* message,
         unsigned int messageLen, unsigned char* digest, unsigned int* digestLen) override;
-    unsigned int HashInit(SGD_HANDLE sessionHandle, ECCrefPublicKey *pucPublicKey);
-    unsigned int HashUpdate(SGD_HANDLE sessionHandle, unsigned char* message, unsigned int messageLen);
-    unsigned int HashFinal(SGD_HANDLE sessionHandle, unsigned char* digest, unsigned int* digestLen);
 
     /**
      * Encrypt
