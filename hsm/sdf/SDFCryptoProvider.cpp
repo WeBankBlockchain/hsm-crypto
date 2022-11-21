@@ -162,7 +162,7 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
         SGD_UINT32 keyLen = SM2_BITS;
 
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2_3, keyLen, &pk, &sk);
+        SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2, keyLen, &pk, &sk);
         if (result != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -617,6 +617,26 @@ SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType alg
     default:
         return makeResult(nullptr, nullptr, nullptr, false, nullptr, SDR_NOTSUPPORT,
             (char*)"algrithum not support yet");
+    }
+}
+
+bool SDFCryptoProvider::generateRandom(unsigned int randomLength, unsigned char* pucRandom)
+{
+    try
+    {
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+        SGD_RV result = SDF_GenerateRandom(sessionHandle, randomLength, pucRandom);
+        m_sessionPool->ReturnSession(sessionHandle);
+        if (result == SDR_OK)
+        {
+            return true;
+        }
+        return false;
+    }
+    catch (const char* e)
+    {
+        return false;
     }
 }
 
