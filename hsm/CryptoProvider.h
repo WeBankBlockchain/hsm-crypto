@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-using namespace std;
 
 namespace hsm
 {
@@ -22,14 +21,14 @@ class Key
 public:
     Key() = default;
 
-    Key(std::shared_ptr<const vector<byte> > privateKey,
-        std::shared_ptr<const vector<byte> > publicKey)
+    Key(std::shared_ptr<const std::vector<byte> > privateKey,
+        std::shared_ptr<const std::vector<byte> > publicKey)
     {
         m_publicKey = publicKey;
         m_privateKey = privateKey;
     };
 
-    Key(unsigned int keyIndex, std::shared_ptr<const vector<byte> > password)
+    Key(unsigned int keyIndex, std::shared_ptr<const std::vector<byte> > password)
     {
         m_keyIndex = keyIndex;
         m_keyPassword = password;
@@ -40,27 +39,27 @@ public:
         m_keyIndex = keyIndex;
         m_isInternalKey = true;
     };
-    void setPrivateKey(std::shared_ptr<const vector<byte> > privateKey)
+    void setPrivateKey(std::shared_ptr<const std::vector<byte> > privateKey)
     {
         m_privateKey = privateKey;
     };
-    void setPublicKey(std::shared_ptr<const vector<byte> > publicKey) { m_publicKey = publicKey; };
-    void setSymmetricKey(std::shared_ptr<const vector<byte> > symmetricKey)
+    void setPublicKey(std::shared_ptr<const std::vector<byte> > publicKey) { m_publicKey = publicKey; };
+    void setSymmetricKey(std::shared_ptr<const std::vector<byte> > symmetricKey)
     {
         m_symmetricKey = symmetricKey;
     };
-    std::shared_ptr<const vector<byte> > publicKey() const { return m_publicKey; }
-    std::shared_ptr<const vector<byte> > privateKey() const { return m_privateKey; }
-    std::shared_ptr<const vector<byte> > symmetrickey() const { return m_symmetricKey; }
+    std::shared_ptr<const std::vector<byte> > publicKey() const { return m_publicKey; }
+    std::shared_ptr<const std::vector<byte> > privateKey() const { return m_privateKey; }
+    std::shared_ptr<const std::vector<byte> > symmetrickey() const { return m_symmetricKey; }
     unsigned int identifier() const { return m_keyIndex; };
-    std::shared_ptr<const vector<byte> > password() const { return m_keyPassword; };
+    std::shared_ptr<const std::vector<byte> > password() const { return m_keyPassword; };
     bool isInternalKey() const { return m_isInternalKey; }
 
 private:
-    std::shared_ptr<const vector<byte> > m_publicKey;
-    std::shared_ptr<const vector<byte> > m_privateKey;
-    std::shared_ptr<const vector<byte> > m_keyPassword;
-    std::shared_ptr<const vector<byte> > m_symmetricKey;
+    std::shared_ptr<const std::vector<byte> > m_publicKey;
+    std::shared_ptr<const std::vector<byte> > m_privateKey;
+    std::shared_ptr<const std::vector<byte> > m_keyPassword;
+    std::shared_ptr<const std::vector<byte> > m_symmetricKey;
     unsigned int m_keyIndex;
     bool m_isInternalKey = false;
 };

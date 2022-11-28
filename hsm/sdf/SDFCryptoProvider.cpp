@@ -11,7 +11,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-using namespace std;
 using namespace hsm;
 
 namespace hsm
@@ -171,7 +170,7 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
 
         std::shared_ptr<const std::vector<byte>> privKey =
             std::make_shared<const std::vector<byte>>((byte*)sk.K + 32, (byte*)sk.K + 64);
-        std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
+        std::shared_ptr<std::vector<byte>> pubKey = std::make_shared<std::vector<byte>>();
         pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
         pubKey->insert(pubKey->end(), (byte*)pk.y+32, (byte*)pk.y + 64);
@@ -300,7 +299,7 @@ unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key& key, AlgorithmType 
             m_sessionPool->ReturnSession(sessionHandle);
             return result;
         }
-        std::shared_ptr<vector<byte>> pubKey = std::make_shared<vector<byte>>();
+        std::shared_ptr<std::vector<byte>> pubKey = std::make_shared<std::vector<byte>>();
         pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x+32, (byte*)pk.x + 64);
         pubKey->insert(pubKey->end(), (byte*)pk.y+32, (byte*)pk.y + 64);
@@ -371,7 +370,7 @@ unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm,
 
 char* SDFCryptoProvider::GetErrorMessage(unsigned int code)
 {
-    string errorMessage = getSdfErrorMessage(code);
+    std::string errorMessage = getSdfErrorMessage(code);
     return (char*)errorMessage.c_str();
 }
 
@@ -417,8 +416,8 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
                     (char*)"private key and digest can not be null. Please check your parameters.");
             }
             Key key = Key();
-            const vector<byte> sk = sdfFromHex(privateKey);
-            std::shared_ptr<const vector<byte>> privKey =
+            const std::vector<byte> sk = sdfFromHex(privateKey);
+            std::shared_ptr<const std::vector<byte>> privKey =
                 std::make_shared<const std::vector<byte>>((byte*)sk.data(), (byte*)sk.data() + 32);
             key.setPrivateKey(privKey);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
@@ -460,8 +459,8 @@ SDFCryptoResult SignWithInternalKey(
                     (char*)"keyIndex should be larger than 1. Please check your parameters.");
             }
             unsigned char* unsignedPwd = reinterpret_cast<unsigned char*>(password);
-            std::shared_ptr<const vector<byte>> pwd(
-                new const vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + strlen(password)));
+            std::shared_ptr<const std::vector<byte>> pwd(
+                new const std::vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + strlen(password)));
             Key key = Key(keyIndex, pwd);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             std::vector<byte> signature(64);
@@ -502,7 +501,7 @@ SDFCryptoResult Verify(
             }
             Key key = Key();
             std::vector<byte> pk = sdfFromHex((char*)publicKey);
-            std::shared_ptr<const vector<byte>> pubKey =
+            std::shared_ptr<const std::vector<byte>> pubKey =
                 std::make_shared<const std::vector<byte>>((byte*)pk.data(), (byte*)pk.data() + 64);
             key.setPublicKey(pubKey);
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
@@ -557,7 +556,7 @@ SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* messa
         {
             SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
             bool isValid;
-            vector<byte> hashResult(32);
+            std::vector<byte> hashResult(32);
             unsigned int len;
             unsigned int code;
             if (publicKey != nullptr)
@@ -565,7 +564,7 @@ SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* messa
                 // if publicKey != nullptr, then hash with z value.
                 Key key = Key();
                 std::vector<byte> pk = sdfFromHex((char*)publicKey);
-                std::shared_ptr<const vector<byte>> pubKey =
+                std::shared_ptr<const std::vector<byte>> pubKey =
                     std::make_shared<const std::vector<byte>>(
                         (byte*)pk.data(), (byte*)pk.data() + 64);
                 key.setPublicKey(pubKey);
@@ -765,7 +764,7 @@ int PrintData(
     return 0;
 }
 
-string getSdfErrorMessage(unsigned int code)
+std::string getSdfErrorMessage(unsigned int code)
 {
     switch (code)
     {

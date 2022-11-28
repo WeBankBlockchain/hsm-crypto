@@ -28,7 +28,6 @@
 #include <string>
 #include <vector>
 #include<condition_variable>
-using namespace std;
 using namespace hsm;
 namespace hsm
 {
