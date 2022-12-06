@@ -21,22 +21,147 @@
 #pragma once
 #include "../Common.h"
 #include "../CryptoProvider.h"
+#include "gmt0018.h"
 #include <stdio.h>
 #include <cstdlib>
 #include <cstring>
 #include <list>
 #include <string>
 #include <vector>
-#include<condition_variable>
+#include <condition_variable>
 using namespace hsm;
 namespace hsm
 {
 namespace sdf
 {
+class SDFApiWrapper
+{
+public:
+    SDFApiWrapper(const std::string& libPath);
+    virtual ~SDFApiWrapper() {}
+
+    int OpenSession(void* _deviceHandle, void* _sessionHandle)
+    {
+        return m_openSession(_deviceHandle, _sessionHandle);
+    }
+    int CloseSession(void* _session)
+    {
+        return m_closeSession(_session);
+    }
+    int OpenDevice(void* _deviceHandle)
+    {
+        return m_openDevice(_deviceHandle);
+    }
+    int CloseDevice(void* _deviceHandle)
+    {
+        return m_closeDevice(_deviceHandle);
+    }
+
+    int GetPrivateKeyAccessRight(void* _sessionHandle, unsigned int _keyIndex, unsigned char* _password, unsigned int _pwdLength)
+    {
+        return m_getPrivateKeyAccessRight(_sessionHandle, _keyIndex, _password, _pwdLength);
+    }
+    int ReleasePrivateKeyAccessRight(void* _sessionHandle, unsigned int _keyIndex)
+    {
+        return m_releasePrivateKeyAccessRight(_sessionHandle, _keyIndex);
+    }
+
+    int GenerateKeyPairECC(void* _sessionHandle, unsigned int _algID, unsigned int _keyBits, ECCrefPublicKey* _publicKey,  ECCrefPrivateKey* _privateKey)
+    {
+        return m_generateKeyPairECC(_sessionHandle, _algID, _keyBits, _publicKey, _privateKey);
+    }
+    int InternalSignECC(void* _sessionHandle, unsigned int _keyIndex, unsigned char* _data, unsigned int _dataLength,  ECCSignature* _signature)
+    {
+        return m_internalSignECC(_sessionHandle, _keyIndex, _data, _dataLength, _signature);
+    }
+    int ExternalSignECC(void* _sessionHandle, unsigned int _algID,  ECCrefPrivateKey* _privateKey, unsigned char* _data, unsigned int _dataLength,  ECCSignature* _signature)
+    {
+        return m_externalSignECC(_sessionHandle, _algID, _privateKey, _data, _dataLength, _signature);
+    }
+    int InternalVerifyECC(void* _sessionHandle, unsigned int _keyIndex, unsigned char* _data, unsigned int _dataLength,  ECCSignature* _signature)
+    {
+        m_internalVerifyECC(_sessionHandle, _keyIndex, _data, _dataLength, _signature);
+    }
+    int ExternalVerifyECC(void* _sessionHandle, unsigned int _algID,  ECCrefPublicKey* _publicKey, unsigned char* _dataInput, unsigned int _inputLength,  ECCSignature* _signature)
+    {
+        return m_externalVerifyECC(_sessionHandle, _algID, _publicKey, _dataInput, _inputLength, _signature);
+    }
+    int ExportSignPublicKeyECC(void* _sessionHandle, unsigned int _keyIndex,  ECCrefPublicKey* _publicKey)
+    {
+        return m_exportSignPublicKeyECC(_sessionHandle, _keyIndex, _publicKey);
+    }
+
+    int HashInit(void* _sessionHandle, unsigned int _algID,  ECCrefPublicKey* _publicKey, unsigned char* _id, unsigned int _idLength)
+    {
+        return m_hashInit(_sessionHandle, _algID, _publicKey, _id, _idLength);
+    }
+    int HashUpdate(void* _sessionHandle, unsigned char* _data, unsigned int _dataLength)
+    {
+        return m_hashUpdate(_sessionHandle, _data, _dataLength);
+    }
+    int HashFinal(void* _sessionHandle, unsigned char* _hash, unsigned int* _hashLength)
+    {
+        return m_hashFinal(_sessionHandle, _hash, _hashLength);
+    }
+
+    int ImportKey(void* _sessionHandle, unsigned char* _key, unsigned int _keyLength, void** _keyHandle)
+    {
+        return m_importKey(_sessionHandle, _key, _keyLength, _keyHandle);
+    }
+    int DestroyKey(void* _sessionHandle, void* _keyHandle)
+    {
+        return m_destroyKey(_sessionHandle, _keyHandle);
+    }
+
+    int Encrypt(void* _sessionHandle, void* _keyHandle, unsigned int _algId, unsigned char* _iv, unsigned char* _data, unsigned int _dataLength, unsigned char* _encData, unsigned int* _encDtaLength)
+    {
+        return m_encrypt(_sessionHandle, _keyHandle, _algId, _iv, _data, _dataLength, _encData, _encDtaLength);
+    }
+    int Decrypt(void* _sessionHandle, void* _keyHandle, unsigned int _algId, unsigned char* _iv, unsigned char* _encData, unsigned int _encDataLength, unsigned char* _data, unsigned int* _dataLength)
+    {
+        return m_decrypt(_sessionHandle, _keyHandle, _algId, _iv, _encData, _encDataLength, _data, _dataLength);
+    }
+    
+    int GenerateRandom(void* _sessionHandle, unsigned int _length, unsigned char* _random)
+    {
+        return m_generateRandom(_sessionHandle, _length, _random);
+    }
+
+
+private:
+    void *m_handle;
+    int (*m_openSession)(void*, void*);
+    int (*m_closeSession)(void*);
+    int (*m_openDevice)(void*);
+    int (*m_closeDevice)(void*) ;
+
+    int (*m_getPrivateKeyAccessRight)(void*, unsigned int, unsigned char*, unsigned int);
+    int (*m_releasePrivateKeyAccessRight)(void*, unsigned int);
+
+    int (*m_generateKeyPairECC)(void*, unsigned int, unsigned int,  ECCrefPublicKey*, ECCrefPrivateKey*);
+    int (*m_internalSignECC)(void*, unsigned int, unsigned char*, unsigned int, ECCSignature*);
+    int (*m_externalSignECC)(void*, unsigned int, ECCrefPrivateKey*, unsigned char*, unsigned int, ECCSignature*);
+    int (*m_internalVerifyECC)(void*, unsigned int, unsigned char*, unsigned int, ECCSignature*);
+    int (*m_externalVerifyECC)(void*, unsigned int, ECCrefPublicKey*, unsigned char*, unsigned int, ECCSignature*);
+    int (*m_exportSignPublicKeyECC)(void*, unsigned int, ECCrefPublicKey*);
+
+    int (*m_hashInit)(void*, unsigned int, ECCrefPublicKey*, unsigned char*, unsigned int);
+    int (*m_hashUpdate)(void*, unsigned char*, unsigned int);
+    int (*m_hashFinal)(void*, unsigned char*, unsigned int*);
+
+    int (*m_importKey)(void*, unsigned char*, unsigned int, void**);
+    int (*m_destroyKey)(void*, void*);
+
+    int (*m_encrypt)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int, unsigned char*, unsigned int*);
+    int (*m_decrypt)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int, unsigned char*, unsigned int*);
+    
+    int (*m_generateRandom)(void*, unsigned int, unsigned char*);
+};
+
 class SessionPool
 {
 public:
-    SessionPool(int size, void* deviceHandle);
+    SessionPool(int _size, void* _deviceHandle, SDFApiWrapper* _sdfApiWrapper);
     void* GetSession();
     void ReturnSession(void* session);
 
@@ -44,6 +169,7 @@ private:
     void* m_deviceHandle;
     size_t m_size;
     size_t m_available_session_count;
+    SDFApiWrapper* m_SDFApiWrapper;
     std::mutex mtx;
     std::condition_variable cv;
 };
@@ -57,8 +183,10 @@ class SDFCryptoProvider : public CryptoProvider
 private:
     void* m_deviceHandle;
     SessionPool* m_sessionPool;
-    SDFCryptoProvider();
-    SDFCryptoProvider(int sessionPoolSize);
+    std::string m_libPath;
+    SDFApiWrapper* m_SDFApiWrapper;
+    SDFCryptoProvider(const std::string& libPath);
+    SDFCryptoProvider(int sessionPoolSize, const std::string& libPath);
     ~SDFCryptoProvider();
     SDFCryptoProvider(const SDFCryptoProvider&);
     SDFCryptoProvider& operator=(const SDFCryptoProvider&);
@@ -67,8 +195,8 @@ public:
     /**
      * Return the instance
      */
-    static SDFCryptoProvider& GetInstance();
-    static SDFCryptoProvider& GetInstance(int sessionPoolSize);
+    static SDFCryptoProvider& GetInstance(const std::string& libPath = "/usr/local/lib/libgmt0018.so");
+    static SDFCryptoProvider& GetInstance(int sessionPoolSize, const std::string& libPath = "/usr/local/lib/libgmt0018.so");
 
     /**
      * Generate key
@@ -114,7 +242,15 @@ public:
      */
     unsigned int ExportInternalPublicKey(Key& key, AlgorithmType algorithm) override;
 
-    bool generateRandom(unsigned int randomLength, unsigned char* pucRandom);
+    /**
+     *  generate random number
+     */
+    bool GenerateRandom(unsigned int randomLength, unsigned char* pucRandom);
+
+    SDFApiWrapper* GetSDFApiWrapper()
+    {
+        return m_SDFApiWrapper;
+    }
 
     char* GetErrorMessage(unsigned int code) override;
     static const unsigned int SM2_BITS;
@@ -131,16 +267,16 @@ struct SDFCryptoResult
     char* sdfErrorMessage;
 };
 
-SDFCryptoResult KeyGen(AlgorithmType algorithm);
-SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* digest);
+SDFCryptoResult KeyGen(const std::string& libPath, AlgorithmType algorithm);
+SDFCryptoResult Sign(const std::string& libPath, char* privateKey, AlgorithmType algorithm, char const* digest);
 SDFCryptoResult SignWithInternalKey(
-    unsigned int keyIndex, char* password, AlgorithmType algorithm, char const* digest);
+    const std::string& libPath, unsigned int keyIndex, char* password, AlgorithmType algorithm, char const* digest);
 SDFCryptoResult Verify(
-    char* publicKey, AlgorithmType algorithm, char const* digest, char const* signature);
+    const std::string& libPath, char* publicKey, AlgorithmType algorithm, char const* digest, char const* signature);
 SDFCryptoResult VerifyWithInternalKey(
-    unsigned int keyIndex, AlgorithmType algorithm, char const* digest, char const* signature);
-SDFCryptoResult Hash(char* key, AlgorithmType algorithm, char const* message);
-SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType algorithm);
+    const std::string& libPath, unsigned int keyIndex, AlgorithmType algorithm, char const* digest, char const* signature);
+SDFCryptoResult Hash(const std::string& libPath, char* key, AlgorithmType algorithm, char const* message);
+SDFCryptoResult ExportInternalPublicKey(const std::string& libPath, unsigned int keyIndex, AlgorithmType algorithm);
 SDFCryptoResult makeResult(char* signature, char* publicKey, char* privateKey, bool result,
     char* hash, unsigned int code, char*);
 char* sdfToHex(const std::vector<byte>& data);

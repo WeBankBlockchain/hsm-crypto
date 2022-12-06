@@ -1,20 +1,19 @@
-if(BUILD_SDF)
-    file(GLOB_RECURSE HEADERS "*.h")
-    file(GLOB_RECURSE SRC_LIST "*.cpp")
-    list(APPEND SRC_LIST ${INSERT_SOURCES})
+file(GLOB_RECURSE HEADERS "*.h")
+file(GLOB_RECURSE SRC_LIST "*.cpp")
+list(APPEND SRC_LIST ${INSERT_SOURCES})
 
-    EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
-    if("${CMAKE_HOST_SYSTEM_NAME}" MATCHES "Linux")
-        message(INFO " HSM SDF support ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} ")
-    else()
-        message(FATAL " HSM  SDF only support Linux, the ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} is not supported.")
-    endif()
-
-    set(LIBRARY_NAME "sdf-crypto_arm")
-    if("${ARCHITECTURE}" MATCHES "x86_64")
-        set(LIBRARY_NAME "sdf-crypto_x86")
-    endif()
-
-    add_library(${LIBRARY_NAME} ${SRC_LIST} ${HEADERS})
-    target_link_libraries(${LIBRARY_NAME} PUBLIC SDF)
+EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
+if("${CMAKE_HOST_SYSTEM_NAME}" MATCHES "Linux")
+    message(INFO " HSM SDF support ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} ")
+else()
+    message(FATAL " HSM  SDF only support Linux, the ${CMAKE_HOST_SYSTEM_NAME} ${ARCHITECTURE} is not supported.")
 endif()
+
+set(LIBRARY_NAME "sdf-crypto_arm")
+if("${ARCHITECTURE}" MATCHES "x86_64")
+    set(LIBRARY_NAME "sdf-crypto_x86")
+endif()
+
+add_library(${LIBRARY_NAME} ${SRC_LIST} ${HEADERS})
+target_link_libraries(${LIBRARY_NAME} ${CMAKE_DL_LIBS})
+

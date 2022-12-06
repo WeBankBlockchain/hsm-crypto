@@ -11,7 +11,7 @@ HSM-Crypto是一个C++实现的硬件加密模块（Hardware secure module），
 ```bash
 mkdir build
 cd build
-cmake .. -DBUILD_SHARED_LIBS=on -DBUILD_SDF=on 
+cmake .. -DBUILD_SHARED_LIBS=on
 make
 ```
 
@@ -19,7 +19,7 @@ make
 ```bash
 mkdir build
 cd build
-cmake .. -DBUILD_SHARED_LIBS=off -DBUILD_SDF=on
+cmake .. -DBUILD_SHARED_LIBS=off
 make
 ```
 ## 运行测试
