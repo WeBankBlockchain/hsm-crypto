@@ -25,6 +25,7 @@ mkdir -p include
 mkdir -p include/sdf
 cp hsm/CryptoProvider.h  include/
 cp hsm/Common.h include/
+cp hsm/gmt0018.h include/
 cp hsm/sdf/SDFCryptoProvider.h  include/sdf/
 mkdir -p lib
 if [[ $get_arch =~ "x86_64" ]];then
