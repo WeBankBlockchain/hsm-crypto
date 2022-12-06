@@ -21,6 +21,7 @@
 #pragma once
 #include "../Common.h"
 #include "../CryptoProvider.h"
+#include "../gmt0018.h"
 #include <stdio.h>
 #include <cstdlib>
 #include <cstring>
