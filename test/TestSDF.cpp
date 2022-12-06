@@ -8,7 +8,6 @@
 using namespace hsm;
 using namespace hsm::sdf;
 
-
 void callCard(int inum)
 {
     for( int i = 0; i < inum; i++){
