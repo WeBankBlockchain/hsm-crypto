@@ -1,6 +1,5 @@
 #include "SDFCryptoProvider.h"
 #include "../Common.h"
-#include "gmt0018.h"
 #include <stdio.h>
 #include <condition_variable>
 #include <cstdlib>
