@@ -44,16 +44,17 @@ int main(int, const char* argv[]){
          << std::endl;
     size_t sessionPoolRound = atoi(argv[1]);
     size_t loopRound = atoi(argv[2]);
+    const std::string libPath = "/usr/lib64/libgmt0018.so";
     try
     {
-        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound, libPath);
     }
     catch (const std::exception& e)
     {
         std::cout << "error occured, info: " << e.what() << std::endl;
         exit(1);
     }
-    SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound);
+    SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound, libPath);
 
     // Make hash
     std::cout << "**************Make SM3 Hash************************"<< std::endl;
@@ -64,7 +65,7 @@ int main(int, const char* argv[]){
 
     std::vector<byte> bHashStdResultVector = {0xde,0xbe,0x9f,0xf9,0x22,0x75,0xb8,0xa1,0x38,0x60,0x48,0x89,0xc1,0x8e,0x5a,0x4d,
                                     0x6f,0xdb,0x70,0xe5,0x38,0x7e,0x57,0x65,0x29,0x3d,0xcb,0xa3,0x9c,0x0c,0x57,0x32};
-    SDFCryptoResult result = Hash(nullptr, SM3, sdfToHex(bHashVector));
+    SDFCryptoResult result = Hash(libPath, nullptr, SM3, sdfToHex(bHashVector));
     if (result.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << result.sdfErrorMessage << std::endl;
     }else{
@@ -74,7 +75,7 @@ int main(int, const char* argv[]){
     }
 
     std::cout << "****KeyGen****" << std::endl;
-    result = KeyGen(SM2);
+    result = KeyGen(libPath, SM2);
     if (result.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << result.sdfErrorMessage << std::endl;
     }else{
@@ -83,7 +84,7 @@ int main(int, const char* argv[]){
     }
     
     std::cout << "**************Make SM2_SM3 Hash************************"<< std::endl;
-    SDFCryptoResult sm2_sm3_result = Hash(result.publicKey, SM3, sdfToHex(bHashVector));
+    SDFCryptoResult sm2_sm3_result = Hash(libPath, result.publicKey, SM3, sdfToHex(bHashVector));
     if (sm2_sm3_result.sdfErrorMessage != nullptr)
     {
         std::cout << "Get error : " << sm2_sm3_result.sdfErrorMessage << std::endl;
@@ -95,7 +96,7 @@ int main(int, const char* argv[]){
 
     std::cout << "****Sign****" << std::endl;
     SDFCryptoResult signResult;
-    signResult = Sign(result.privateKey, SM2, sdfToHex(bHashStdResultVector));
+    signResult = Sign(libPath, result.privateKey, SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << signResult.sdfErrorMessage << std::endl;
     }else{
@@ -105,7 +106,7 @@ int main(int, const char* argv[]){
     std::cout << "****Verify****" << std::endl;
     SDFCryptoResult verifyResult;
     verifyResult = Verify(
-        result.publicKey, SM2, hsm::sdf::sdfToHex(bHashStdResultVector), signResult.signature);
+        libPath, result.publicKey, SM2, hsm::sdf::sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << verifyResult.sdfErrorMessage << std::endl;
     }else{
@@ -113,7 +114,7 @@ int main(int, const char* argv[]){
     }
 
     std::cout << "****SignInternalKey****" << std::endl;
-    signResult = SignWithInternalKey(1, "12345678", SM2, sdfToHex(bHashStdResultVector));
+    signResult = SignWithInternalKey(libPath, 1, "12345678", SM2, sdfToHex(bHashStdResultVector));
     if (signResult.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << signResult.sdfErrorMessage << std::endl;
     }else{
@@ -122,7 +123,7 @@ int main(int, const char* argv[]){
 
     std::cout << "****VerifyInternalKey****" << std::endl;
     verifyResult = VerifyWithInternalKey(
-        1, SM2, (const char*)sdfToHex(bHashStdResultVector), signResult.signature);
+        libPath, 1, SM2, (const char*)sdfToHex(bHashStdResultVector), signResult.signature);
     if (verifyResult.sdfErrorMessage != nullptr){
         std::cout << "Get error : " << verifyResult.sdfErrorMessage << std::endl;
     }else{
@@ -130,7 +131,7 @@ int main(int, const char* argv[]){
     }
 
     std::cout << "*****ExportInternalPublicKey****" << std::endl;
-    SDFCryptoResult exportResult = ExportInternalPublicKey(1, SM2);
+    SDFCryptoResult exportResult = ExportInternalPublicKey(libPath, 1, SM2);
     std::cout << "Export public key: " << exportResult.publicKey << std::endl;
 
 
@@ -181,7 +182,7 @@ int main(int, const char* argv[]){
     unsigned int randomLength = 64;
     unsigned char ucRandom[1024+1] = {0};
     unsigned char Rand1[1024+1] = {0};
-    if (provider.generateRandom(randomLength, ucRandom))
+    if (provider.GenerateRandom(randomLength, ucRandom))
     {
         hextostr(ucRandom,64,Rand1);
         std::cout << "generate random number success :" << Rand1 << std::endl;

@@ -10,13 +10,10 @@ macro(add_option O DEF)
     endif()
 endmacro()
 
-add_option(BUILD_SDF ON)
 add_option(BUILD_SHARED_LIBS OFF)
 
-if(BUILD_SDF)
-    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-        message(FATAL "${CMAKE_SYSTEM_NAME} ${ARCHITECTURE} does not support by hardware secure module")
-    endif()
+if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+    message(FATAL "${CMAKE_SYSTEM_NAME} ${ARCHITECTURE} does not support by hardware secure module")
 endif()
 
 macro(print_config NAME)
@@ -28,7 +25,6 @@ message("-- CMake              Cmake version and location   ${CMAKE_VERSION} (${
 message("-- Compiler           C++ compiler version         ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message("-- TARGET_PLATFORM    Target platform              ${CMAKE_SYSTEM_NAME} ${ARCHITECTURE}")
 message("-- BUILD_SHARED_LIBS  Build shard lib              ${BUILD_SHARED_LIBS}")
-message("-- BUILD_SDF          Build SDF HSM                ${BUILD_SDF}")
 message("------------------------------------------------------------------------")
 message("")
 endmacro()

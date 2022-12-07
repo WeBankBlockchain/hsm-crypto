@@ -5,7 +5,9 @@
 #include <condition_variable>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <exception>
+#include <gnu/lib-names.h>
 #include <iostream>
 #include <list>
 #include <memory>
@@ -17,22 +19,61 @@ namespace hsm
 {
 namespace sdf
 {
-SessionPool::SessionPool(int size, void* deviceHandle)
+
+SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
 {
-    if(size <= 0){
+    m_handle = dlopen(libPath.c_str(), RTLD_LAZY);
+    if (!m_handle) {
+        throw std::runtime_error(
+            "Cannot dynamic loading SDF lib, lib path: " + libPath);
+    }
+
+    m_openSession = (int (*)(void*, void*)) dlsym(m_handle, "SDF_OpenSession");
+    m_closeSession = (int (*)(void*)) dlsym(m_handle, "SDF_CloseSession");
+    m_openDevice = (int (*)(void*)) dlsym(m_handle, "SDF_OpenDevice");
+    m_closeDevice = (int (*)(void*)) dlsym(m_handle, "SDF_CloseDevice");
+
+    m_getPrivateKeyAccessRight = (int (*)(void*, unsigned int, unsigned char*, unsigned int)) dlsym(m_handle, "SDF_GetPrivateKeyAccessRight");
+    m_releasePrivateKeyAccessRight = (int (*)(void*, unsigned int)) dlsym(m_handle, "SDF_ReleasePrivateKeyAccessRight");
+
+    m_generateKeyPairECC = (int (*)(void*, unsigned int, unsigned int, ECCrefPublicKey*, ECCrefPrivateKey*)) dlsym(m_handle, "SDF_GenerateKeyPair_ECC");
+    m_internalSignECC = (int (*)(void*, unsigned int, unsigned char*, unsigned int, ECCSignature*)) dlsym(m_handle, "SDF_InternalSign_ECC");
+    m_externalSignECC = (int (*)(void*, unsigned int, ECCrefPrivateKey*, unsigned char*, unsigned int, ECCSignature*)) dlsym(m_handle, "SDF_ExternalSign_ECC");
+    m_internalVerifyECC = (int (*)(void*, unsigned int, unsigned char*, unsigned int, ECCSignature*)) dlsym(m_handle, "SDF_InternalVerify_ECC");
+    m_externalVerifyECC = (int (*)(void*, unsigned int, ECCrefPublicKey*, unsigned char*, unsigned int, ECCSignature*)) dlsym(m_handle, "SDF_ExternalVerify_ECC");
+    m_exportSignPublicKeyECC = (int (*)(void*, unsigned int, ECCrefPublicKey*)) dlsym(m_handle, "SDF_ExportSignPublicKey_ECC");
+
+    m_hashInit = (int (*)(void*, unsigned int, ECCrefPublicKey*, unsigned char*, unsigned int)) dlsym(m_handle, "SDF_HashInit");
+    m_hashUpdate = (int (*)(void*, unsigned char*, unsigned int)) dlsym(m_handle, "SDF_HashUpdate");
+    m_hashFinal = (int (*)(void*, unsigned char*, unsigned int*)) dlsym(m_handle, "SDF_HashFinal");
+
+    m_importKey = (int (*)(void*, unsigned char*, unsigned int, void**)) dlsym(m_handle, "SDF_ImportKey");
+    m_destroyKey = (int (*)(void*, void*)) dlsym(m_handle, "SDF_DestroyKey");
+
+    m_encrypt = (int (*)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int, unsigned char*, unsigned int*)) dlsym(m_handle, "SDF_Encrypt");
+    m_decrypt = (int (*)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int, unsigned char*, unsigned int*)) dlsym(m_handle, "SDF_Decrypt");
+    
+    m_generateRandom = (int (*)(void*, unsigned int, unsigned char*)) dlsym(m_handle, "SDF_GenerateRandom");
+}
+
+SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper* _sdfApiWrapper)
+{
+    if(_size <= 0){
         throw std::runtime_error("HSM device session pool size should be bigger than 0");
     }
-    m_size = size;
-    m_deviceHandle = deviceHandle;
-    m_available_session_count = size;
+    m_size = _size;
+    m_deviceHandle = _deviceHandle;
+    m_available_session_count = _size;
+    m_SDFApiWrapper = _sdfApiWrapper;
 }
+
 void* SessionPool::GetSession()
 {
     std::unique_lock<std::mutex> l(mtx);
     cv.wait(l, [this]() -> bool { return !m_available_session_count == 0; });
     SGD_HANDLE sessionHandle;
-    SGD_RV sessionStatus = SDF_OpenSession(m_deviceHandle, &sessionHandle);
-    if (sessionStatus != SDR_OK)
+    SGD_RV sessionStatus = m_SDFApiWrapper->OpenSession(m_deviceHandle, &sessionHandle);
+    if (sessionStatus != SDR_OK) 
     {
         throw std::runtime_error(
             "Cannot open session, error: " + getSdfErrorMessage(sessionStatus));
@@ -44,7 +85,7 @@ void* SessionPool::GetSession()
 void SessionPool::ReturnSession(void* session)
 {
     std::unique_lock<std::mutex> l(mtx);
-    SDF_CloseSession(session);
+    m_SDFApiWrapper->CloseSession(session);
     int i = 1;
     m_available_session_count++;
     cv.notify_all();
@@ -52,43 +93,48 @@ void SessionPool::ReturnSession(void* session)
 
 const unsigned int SDFCryptoProvider::SM2_BITS = 256;
 const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
-SDFCryptoProvider::SDFCryptoProvider()
+SDFCryptoProvider::SDFCryptoProvider(const std::string& libPath)
 {
-    SGD_RV deviceStatus = SDF_OpenDevice(&m_deviceHandle);
+    m_libPath = libPath;
+    m_SDFApiWrapper = new SDFApiWrapper(m_libPath);
+    SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
         throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
-    m_sessionPool = new SessionPool(50, m_deviceHandle);
+    m_sessionPool = new SessionPool(50, m_deviceHandle, m_SDFApiWrapper);
 }
 
-SDFCryptoProvider::SDFCryptoProvider(int sessionPoolSize)
+SDFCryptoProvider::SDFCryptoProvider(int sessionPoolSize, const std::string& libPath)
 {
-    SGD_RV deviceStatus = SDF_OpenDevice(&m_deviceHandle);
+    m_libPath = libPath;
+    m_SDFApiWrapper = new SDFApiWrapper(m_libPath);
+    SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
         throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
-    m_sessionPool = new SessionPool(sessionPoolSize, m_deviceHandle);
+    m_sessionPool = new SessionPool(sessionPoolSize, m_deviceHandle, m_SDFApiWrapper);
 }
 
 SDFCryptoProvider::~SDFCryptoProvider()
 {
     delete m_sessionPool;
+    delete m_SDFApiWrapper;
     if (m_deviceHandle != NULL)
     {
-        SDF_CloseDevice(m_deviceHandle);
+        m_SDFApiWrapper->CloseDevice(m_deviceHandle);
     }
 }
 
-SDFCryptoProvider& SDFCryptoProvider::GetInstance()
+SDFCryptoProvider& SDFCryptoProvider::GetInstance(const std::string& libPath)
 {
-    return GetInstance(10);
+    return GetInstance(10, libPath);
 }
 
-SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize)
+SDFCryptoProvider& SDFCryptoProvider::GetInstance(int sessionPoolSize, const std::string& libPath)
 {
-    static SDFCryptoProvider instance(sessionPoolSize);
+    static SDFCryptoProvider instance(sessionPoolSize, libPath);
     return instance;
 }
 
@@ -107,8 +153,8 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
             if (key.password() != NULL && key.password()->size() != 0)
             {
                 SGD_RV getAccessRightCode =
-                    SDF_GetPrivateKeyAccessRight(sessionHandle, key.identifier(),
-                        (SGD_UCHAR*)key.password()->data(), (SGD_UINT32)key.password()->size());
+                    m_SDFApiWrapper->GetPrivateKeyAccessRight(sessionHandle, key.identifier(),
+                         (SGD_UCHAR*)key.password()->data(), (SGD_UINT32)key.password()->size());
                 if (getAccessRightCode != SDR_OK)
                 {
                     m_sessionPool->ReturnSession(sessionHandle);
@@ -116,13 +162,13 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
                 }
             }
             ECCSignature eccSignature;
-            signCode = SDF_InternalSign_ECC(sessionHandle, key.identifier(), (SGD_UCHAR*)digest,
+            signCode = m_SDFApiWrapper->InternalSignECC(sessionHandle, key.identifier(), (SGD_UCHAR*)digest,
                 digestLen, &eccSignature);
             memcpy(signature, eccSignature.r + 32, 32);
             memcpy(signature + 32, eccSignature.s + 32, 32);
             if (key.password() != NULL && key.password()->size() != 0)
             {
-                SDF_ReleasePrivateKeyAccessRight(sessionHandle, key.identifier());
+                m_SDFApiWrapper->ReleasePrivateKeyAccessRight(sessionHandle, key.identifier());
             }
         }
         else     
@@ -131,7 +177,7 @@ unsigned int SDFCryptoProvider::Sign(Key const& key, AlgorithmType algorithm,
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.K + 32, key.privateKey()->data(), 32);
             ECCSignature eccSignature;
-            signCode = SDF_ExternalSign_ECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest,
+            signCode = m_SDFApiWrapper->ExternalSignECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest,
                 digestLen, &eccSignature);
             memcpy(signature, eccSignature.r + 32, 32);
             memcpy(signature + 32, eccSignature.s + 32, 32);
@@ -161,7 +207,7 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
         SGD_UINT32 keyLen = SM2_BITS;
 
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV result = SDF_GenerateKeyPair_ECC(sessionHandle, SGD_SM2, keyLen, &pk, &sk);
+        SGD_RV result = m_SDFApiWrapper->GenerateKeyPairECC(sessionHandle, SGD_SM2, keyLen, &pk, &sk);
         if (result != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -196,7 +242,7 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
         SGD_RV code;
         if (key == nullptr)
         {
-            code = SDF_HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
+            code = m_SDFApiWrapper->HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
         }
         else
         {
@@ -204,7 +250,7 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x + 32, key->publicKey()->data(), 32);
             memcpy(eccKey.y + 32, key->publicKey()->data() + 32, 32);
-            code = SDF_HashInit(sessionHandle, SGD_SM3, &eccKey,(unsigned char*)SM2_USER_ID.c_str(),16);
+            code = m_SDFApiWrapper->HashInit(sessionHandle, SGD_SM3, &eccKey,(unsigned char*)SM2_USER_ID.c_str(),16);
         }
         if (code != SDR_OK)
         {
@@ -212,14 +258,15 @@ unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
             return code;
         }
 
-        code = SDF_HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
+        code = m_SDFApiWrapper->HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
             return code;
         }
 
-        code = SDF_HashFinal(sessionHandle, digest, digestLen);
+        code = m_SDFApiWrapper->HashFinal(sessionHandle, digest, digestLen);
+
         if (code != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -254,7 +301,7 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
 
         if (key.isInternalKey())
         {
-            code = SDF_InternalVerify_ECC(
+            code = m_SDFApiWrapper->InternalVerifyECC(
                 sessionHandle, key.identifier(), (SGD_UCHAR*)digest, digestLen, &eccSignature);
         }
         else
@@ -263,7 +310,7 @@ unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x+32, key.publicKey()->data(), 32);
             memcpy(eccKey.y+32, key.publicKey()->data() + 32, 32);
-            code = SDF_ExternalVerify_ECC(
+            code = m_SDFApiWrapper->ExternalVerifyECC(
                 sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest, digestLen, &eccSignature);
         }
         if (code == SDR_OK)
@@ -293,7 +340,7 @@ unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key& key, AlgorithmType 
         }
         ECCrefPublicKey pk;
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV result = SDF_ExportSignPublicKey_ECC(sessionHandle, key.identifier(), &pk);
+        SGD_RV result = m_SDFApiWrapper->ExportSignPublicKeyECC(sessionHandle, key.identifier(), &pk);
         if (result != SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
@@ -322,16 +369,16 @@ unsigned int SDFCryptoProvider::Encrypt(Key const& key, AlgorithmType algorithm,
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
         SGD_HANDLE keyHandler;
-        SGD_RV importResult = SDF_ImportKey(sessionHandle, (SGD_UCHAR*)key.symmetrickey()->data(),
+        SGD_RV importResult = m_SDFApiWrapper->ImportKey(sessionHandle, (SGD_UCHAR*)key.symmetrickey()->data(),
             key.symmetrickey()->size(), &keyHandler);
         if (!importResult == SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
             return importResult;
         }
-        SGD_RV result = SDF_Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
+        SGD_RV result = m_SDFApiWrapper->Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
             (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*)cyphertext, cyphertextLen);
-        SDF_DestroyKey(sessionHandle, keyHandler);
+        m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
     }
@@ -350,16 +397,16 @@ unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm,
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
         SGD_HANDLE keyHandler;
-        SGD_RV importResult = SDF_ImportKey(sessionHandle, (SGD_UCHAR*)key.symmetrickey()->data(),
+        SGD_RV importResult = m_SDFApiWrapper->ImportKey(sessionHandle, (SGD_UCHAR*)key.symmetrickey()->data(),
             key.symmetrickey()->size(), &keyHandler);
         if (!importResult == SDR_OK)
         {
             m_sessionPool->ReturnSession(sessionHandle);
             return importResult;
         }
-        SGD_RV result = SDF_Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
+        SGD_RV result = m_SDFApiWrapper->Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
             (SGD_UCHAR*)cyphertext, cyphertextLen, (SGD_UCHAR*)plantext, plantextLen); 
-        SDF_DestroyKey(sessionHandle, keyHandler);
+        m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
     }
@@ -374,14 +421,14 @@ char* SDFCryptoProvider::GetErrorMessage(unsigned int code)
     return (char*)errorMessage.c_str();
 }
 
-SDFCryptoResult KeyGen(AlgorithmType algorithm)
+SDFCryptoResult KeyGen(const std::string& libPath, AlgorithmType algorithm)
 {
     switch (algorithm)
     {
     case SM2:
         try
         {
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             Key key = Key();
             unsigned int code = provider.KeyGen(algorithm, &key);
             if (code != SDR_OK)
@@ -403,7 +450,8 @@ SDFCryptoResult KeyGen(AlgorithmType algorithm)
             (char*)"algrithum not support yet");
     }
 }
-SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* digest)
+
+SDFCryptoResult Sign(const std::string& libPath, char* privateKey, AlgorithmType algorithm, char const* digest)
 {
     switch (algorithm)
     {
@@ -420,7 +468,7 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
             std::shared_ptr<const std::vector<byte>> privKey =
                 std::make_shared<const std::vector<byte>>((byte*)sk.data(), (byte*)sk.data() + 32);
             key.setPrivateKey(privKey);
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             std::vector<byte> signature(64);
             // unsigned char* signature = (unsigned char*)malloc(64 * sizeof(char));
             unsigned int len;
@@ -446,7 +494,7 @@ SDFCryptoResult Sign(char* privateKey, AlgorithmType algorithm, char const* dige
     }
 }
 SDFCryptoResult SignWithInternalKey(
-    unsigned int keyIndex, char* password, AlgorithmType algorithm, char const* digest)
+    const std::string& libPath, unsigned int keyIndex, char* password, AlgorithmType algorithm, char const* digest)
 {
     switch (algorithm)
     {
@@ -462,7 +510,7 @@ SDFCryptoResult SignWithInternalKey(
             std::shared_ptr<const std::vector<byte>> pwd(
                 new const std::vector<byte>((byte*)unsignedPwd, (byte*)unsignedPwd + strlen(password)));
             Key key = Key(keyIndex, pwd);
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             std::vector<byte> signature(64);
             unsigned int len;
             unsigned int code = provider.Sign(key, algorithm, sdfFromHex((char*)digest).data(),
@@ -487,7 +535,7 @@ SDFCryptoResult SignWithInternalKey(
     }
 }
 SDFCryptoResult Verify(
-    char* publicKey, AlgorithmType algorithm, char const* digest, char const* signature)
+    const std::string& libPath, char* publicKey, AlgorithmType algorithm, char const* digest, char const* signature)
 {
     switch (algorithm)
     {
@@ -504,7 +552,7 @@ SDFCryptoResult Verify(
             std::shared_ptr<const std::vector<byte>> pubKey =
                 std::make_shared<const std::vector<byte>>((byte*)pk.data(), (byte*)pk.data() + 64);
             key.setPublicKey(pubKey);
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             bool isValid;
             unsigned int code = provider.Verify(key, algorithm, sdfFromHex((char*)digest).data(),
                 getHexByteLen((char*)digest), sdfFromHex((char*)signature).data(),
@@ -522,7 +570,7 @@ SDFCryptoResult Verify(
 }
 
 SDFCryptoResult VerifyWithInternalKey(
-    unsigned int keyIndex, AlgorithmType algorithm, char const* digest, char const* signature)
+    const std::string& libPath, unsigned int keyIndex, AlgorithmType algorithm, char const* digest, char const* signature)
 {
     switch (algorithm)
     {
@@ -530,7 +578,7 @@ SDFCryptoResult VerifyWithInternalKey(
         try
         {
             Key key = Key(keyIndex);
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             bool isValid;
             unsigned int code = provider.Verify(key, algorithm, sdfFromHex((char*)digest).data(),
                 getHexByteLen((char*)digest), sdfFromHex((char*)signature).data(),
@@ -547,14 +595,14 @@ SDFCryptoResult VerifyWithInternalKey(
     }
 }
 
-SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* message)
+SDFCryptoResult Hash(const std::string& libPath, char* publicKey, AlgorithmType algorithm, char const* message)
 {
     switch (algorithm)
     {
     case SM3:
         try
         {
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             bool isValid;
             std::vector<byte> hashResult(32);
             unsigned int len;
@@ -589,14 +637,14 @@ SDFCryptoResult Hash(char* publicKey, AlgorithmType algorithm, char const* messa
     }
 }
 
-SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType algorithm)
+SDFCryptoResult ExportInternalPublicKey(const std::string& libPath, unsigned int keyIndex, AlgorithmType algorithm)
 {
     switch (algorithm)
     {
     case SM2:
         try
         {
-            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+            SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(libPath);
             Key key = Key(keyIndex);
             unsigned int code = provider.ExportInternalPublicKey(key, SM2);
             if (code == SDR_OK)
@@ -619,13 +667,13 @@ SDFCryptoResult ExportInternalPublicKey(unsigned int keyIndex, AlgorithmType alg
     }
 }
 
-bool SDFCryptoProvider::generateRandom(unsigned int randomLength, unsigned char* pucRandom)
+bool SDFCryptoProvider::GenerateRandom(unsigned int randomLength, unsigned char* pucRandom)
 {
     try
     {
-        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance();
+        SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(m_libPath);
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV result = SDF_GenerateRandom(sessionHandle, randomLength, pucRandom);
+        SGD_RV result = m_SDFApiWrapper->GenerateRandom(sessionHandle, randomLength, pucRandom);
         m_sessionPool->ReturnSession(sessionHandle);
         if (result == SDR_OK)
         {
@@ -650,7 +698,7 @@ SDFCryptoResult makeResult(char* signature, char* publicKey, char* privateKey, b
     cryptoResult.hash = hash;
     if (code != SDR_OK)
     {
-        cryptoResult.sdfErrorMessage = SDFCryptoProvider::GetInstance().GetErrorMessage(code);
+        cryptoResult.sdfErrorMessage = (char*)getSdfErrorMessage(code).c_str();
     }
     else
     {

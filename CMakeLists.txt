@@ -10,10 +10,10 @@ include_directories("${CMAKE_SOURCE_DIR}")
 include(Options)
 print_config(${PROJECT_NAME})
 
-if(BUILD_SDF)
-    include(ProjectSDF)
-    add_subdirectory(hsm)
-    if(BUILD_SHARED_LIBS)
+include(ProjectSDF)
+add_subdirectory(hsm)
+
+if(BUILD_SHARED_LIBS)
     add_subdirectory(test)
-    endif()
 endif()
+
