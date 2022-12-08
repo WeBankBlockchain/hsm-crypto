@@ -180,16 +180,12 @@ private:
  */
 class SDFCryptoProvider : public CryptoProvider
 {
-private:
-    void* m_deviceHandle;
-    SessionPool* m_sessionPool;
-    std::string m_libPath;
-    SDFApiWrapper* m_SDFApiWrapper;
+public:
     SDFCryptoProvider(const std::string& libPath);
     SDFCryptoProvider(int sessionPoolSize, const std::string& libPath);
     ~SDFCryptoProvider();
-    SDFCryptoProvider(const SDFCryptoProvider&);
-    SDFCryptoProvider& operator=(const SDFCryptoProvider&);
+    SDFCryptoProvider(const SDFCryptoProvider&) = default;
+    SDFCryptoProvider& operator=(const SDFCryptoProvider&) = default;
 
 public:
     /**
@@ -255,6 +251,12 @@ public:
     char* GetErrorMessage(unsigned int code) override;
     static const unsigned int SM2_BITS;
     static const std::string SM2_USER_ID;
+
+private:
+    void* m_deviceHandle;
+    SessionPool* m_sessionPool;
+    std::string m_libPath;
+    SDFApiWrapper* m_SDFApiWrapper;
 };
 
 struct SDFCryptoResult
