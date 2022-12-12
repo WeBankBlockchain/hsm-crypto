@@ -11,10 +11,7 @@ macro(add_option O DEF)
 endmacro()
 
 add_option(BUILD_SHARED_LIBS OFF)
-
-if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    message(FATAL "${CMAKE_SYSTEM_NAME} ${ARCHITECTURE} does not support by hardware secure module")
-endif()
+EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 
 macro(print_config NAME)
 message("")

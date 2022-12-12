@@ -17,3 +17,8 @@ if(BUILD_SHARED_LIBS)
     add_subdirectory(test)
 endif()
 
+install(
+    DIRECTORY "hsm"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/hsm"
+    FILES_MATCHING PATTERN "*.h"
+)
