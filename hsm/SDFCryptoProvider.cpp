@@ -1,5 +1,5 @@
 #include "SDFCryptoProvider.h"
-#include "../Common.h"
+#include "Common.h"
 #include <dlfcn.h>
 #include <stdio.h>
 #include <condition_variable>
@@ -14,8 +14,6 @@
 using namespace hsm;
 
 namespace hsm
-{
-namespace sdf
 {
 
 SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
@@ -883,5 +881,4 @@ std::string getSdfErrorMessage(unsigned int code)
     }
 }
 
-}  // namespace sdf
 }  // namespace hsm

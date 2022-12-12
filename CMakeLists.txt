@@ -19,6 +19,6 @@ endif()
 
 install(
     DIRECTORY "hsm"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/hsm"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/hsm-crypto"
     FILES_MATCHING PATTERN "*.h"
 )
