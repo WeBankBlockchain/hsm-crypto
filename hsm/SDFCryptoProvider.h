@@ -35,6 +35,7 @@ namespace hsm
 class SDFApiWrapper
 {
 public:
+    using Ptr = std::shared_ptr<SDFApiWrapper>;
     SDFApiWrapper(const std::string& libPath);
     virtual ~SDFApiWrapper() {}
 
@@ -172,7 +173,8 @@ private:
 class SessionPool
 {
 public:
-    SessionPool(int _size, void* _deviceHandle, SDFApiWrapper* _sdfApiWrapper);
+    using Ptr = std::shared_ptr<SessionPool>;
+    SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper);
     void* GetSession();
     void ReturnSession(void* session);
 
@@ -180,7 +182,7 @@ private:
     void* m_deviceHandle;
     size_t m_size;
     size_t m_available_session_count;
-    SDFApiWrapper* m_SDFApiWrapper;
+    SDFApiWrapper::Ptr m_SDFApiWrapper;
     std::mutex mtx;
     std::condition_variable cv;
 };
@@ -256,7 +258,7 @@ public:
      */
     bool GenerateRandom(unsigned int randomLength, unsigned char* pucRandom);
 
-    SDFApiWrapper* GetSDFApiWrapper() { return m_SDFApiWrapper; }
+    SDFApiWrapper::Ptr GetSDFApiWrapper() { return m_SDFApiWrapper; }
 
     char* GetErrorMessage(unsigned int code) override;
     static const unsigned int SM2_BITS;
@@ -264,9 +266,9 @@ public:
 
 private:
     void* m_deviceHandle;
-    SessionPool* m_sessionPool;
+    SessionPool::Ptr m_sessionPool;
     std::string m_libPath;
-    SDFApiWrapper* m_SDFApiWrapper;
+    SDFApiWrapper::Ptr m_SDFApiWrapper;
 };
 
 struct SDFCryptoResult
