@@ -19,6 +19,13 @@ namespace hsm
 SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
 {
     m_handle = dlopen(libPath.c_str(), RTLD_LAZY);
+    char *errstr;
+    errstr = dlerror();
+    if (errstr != NULL)
+    {
+        throw std::runtime_error("A dynamic linking error occurred: " + std::string(errstr) + " , Cannot dynamic loading SDF lib, lib path: " + libPath);
+    }
+
     if (!m_handle)
     {
         throw std::runtime_error("Cannot dynamic loading SDF lib, lib path: " + libPath);
@@ -65,7 +72,7 @@ SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
         (int (*)(void*, unsigned int, unsigned char*))dlsym(m_handle, "SDF_GenerateRandom");
 }
 
-SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper* _sdfApiWrapper)
+SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
 {
     if (_size <= 0)
     {
@@ -106,31 +113,29 @@ const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
 SDFCryptoProvider::SDFCryptoProvider(const std::string& libPath)
 {
     m_libPath = libPath;
-    m_SDFApiWrapper = new SDFApiWrapper(m_libPath);
+    m_SDFApiWrapper = std::make_shared<SDFApiWrapper>(m_libPath);
     SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
         throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
-    m_sessionPool = new SessionPool(50, m_deviceHandle, m_SDFApiWrapper);
+    m_sessionPool = std::make_shared<SessionPool>(50, m_deviceHandle, m_SDFApiWrapper);
 }
 
 SDFCryptoProvider::SDFCryptoProvider(int sessionPoolSize, const std::string& libPath)
 {
     m_libPath = libPath;
-    m_SDFApiWrapper = new SDFApiWrapper(m_libPath);
+    m_SDFApiWrapper = std::make_shared<SDFApiWrapper>(m_libPath);
     SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
     if (deviceStatus != SDR_OK)
     {
         throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
-    m_sessionPool = new SessionPool(sessionPoolSize, m_deviceHandle, m_SDFApiWrapper);
+    m_sessionPool = std::make_shared<SessionPool>(sessionPoolSize, m_deviceHandle, m_SDFApiWrapper);
 }
 
 SDFCryptoProvider::~SDFCryptoProvider()
 {
-    delete m_sessionPool;
-    delete m_SDFApiWrapper;
     if (m_deviceHandle != NULL)
     {
         m_SDFApiWrapper->CloseDevice(m_deviceHandle);
