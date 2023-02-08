@@ -28,8 +28,13 @@ namespace hsm
 SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
 {
     m_handle = dlopen(libPath.c_str(), RTLD_LAZY);
+
     char *errstr;
-    errstr = dlerror();
+    #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+        errstr = reinterpret_cast<char*>(dlerror());
+    #else
+        errstr = dlerror();
+    #endif
     if (errstr != NULL)
     {
         throw std::runtime_error("A dynamic linking error occurred: " + std::string(errstr) + " , Cannot dynamic loading SDF lib, lib path: " + libPath);

@@ -76,7 +76,7 @@ public:
     int InternalVerifyECC(void* _sessionHandle, unsigned int _keyIndex, unsigned char* _data,
         unsigned int _dataLength, ECCSignature* _signature)
     {
-        m_internalVerifyECC(_sessionHandle, _keyIndex, _data, _dataLength, _signature);
+        return m_internalVerifyECC(_sessionHandle, _keyIndex, _data, _dataLength, _signature);
     }
     int ExternalVerifyECC(void* _sessionHandle, unsigned int _algID, ECCrefPublicKey* _publicKey,
         unsigned char* _dataInput, unsigned int _inputLength, ECCSignature* _signature)
@@ -143,7 +143,12 @@ public:
 
 
 private:
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    HMODULE m_handle;
+#else
     void* m_handle;
+#endif
+
     int (*m_openSession)(void*, void*);
     int (*m_closeSession)(void*);
     int (*m_openDevice)(void*);
