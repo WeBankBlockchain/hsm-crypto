@@ -13,6 +13,8 @@ endmacro()
 add_option(BUILD_SHARED_LIBS OFF)
 EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 
+add_compile_options(-fPIC)
+
 macro(print_config NAME)
 message("")
 message("------------------------------------------------------------------------")

@@ -1,6 +1,4 @@
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-    #include <windows.h>
-
     #define dlopen(path, arg2) LoadLibrary(path)
     #define dlsym(handle, func) GetProcAddress(handle, func)
     #define dlerror() GetLastError()
