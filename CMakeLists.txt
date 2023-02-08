@@ -13,9 +13,11 @@ print_config(${PROJECT_NAME})
 include(ProjectSDF)
 add_subdirectory(hsm)
 
-if(BUILD_SHARED_LIBS)
-    add_subdirectory(test)
-endif()
+#if(BUILD_SHARED_LIBS)
+#    add_subdirectory(test)
+#endif()
+
+add_subdirectory(test)
 
 install(
     DIRECTORY "hsm"
