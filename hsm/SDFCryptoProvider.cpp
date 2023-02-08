@@ -1,6 +1,15 @@
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    #include <windows.h>
+
+    #define dlopen(path, arg2) LoadLibrary(path)
+    #define dlsym(handle, func) GetProcAddress(handle, func)
+    #define dlerror() GetLastError()
+#else
+    #include <dlfcn.h>
+#endif
+
 #include "SDFCryptoProvider.h"
 #include "Common.h"
-#include <dlfcn.h>
 #include <stdio.h>
 #include <condition_variable>
 #include <cstdlib>
@@ -61,6 +70,7 @@ SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
 
     m_importKey =
         (int (*)(void*, unsigned char*, unsigned int, void**))dlsym(m_handle, "SDF_ImportKey");
+    m_getSymmKeyHandle = (int (*)(void*, unsigned int, void**))dlsym(m_handle, "SDF_GetSymmKeyHandle");
     m_destroyKey = (int (*)(void*, void*))dlsym(m_handle, "SDF_DestroyKey");
 
     m_encrypt = (int (*)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int,
@@ -406,6 +416,38 @@ unsigned int SDFCryptoProvider::Encrypt(Key const& key, AlgorithmType algorithm,
     }
 }
 
+unsigned int SDFCryptoProvider::EncryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
+    unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
+    unsigned int* cyphertextLen)
+{
+    switch (algorithm)
+    {
+    case SM4_CBC:
+    {
+        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+        SGD_HANDLE keyHandler;
+        SGD_RV getSymmKeyResult = m_SDFApiWrapper->GetSymmKeyHandle(sessionHandle,
+                keyIndex, &keyHandler);
+
+        if (!getSymmKeyResult == SDR_OK)
+        {
+            m_sessionPool->ReturnSession(sessionHandle);
+            return getSymmKeyResult;
+        }
+        
+        SGD_RV result =
+            m_SDFApiWrapper->Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
+                (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*)cyphertext, cyphertextLen);
+        
+        m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
+        m_sessionPool->ReturnSession(sessionHandle);
+        return result;
+    }
+    default:
+        return SDR_ALGNOTSUPPORT;
+    }
+}
+
 unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv,
     unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
     unsigned int* plantextLen)
@@ -422,6 +464,35 @@ unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm,
         {
             m_sessionPool->ReturnSession(sessionHandle);
             return importResult;
+        }
+        SGD_RV result =
+            m_SDFApiWrapper->Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
+                (SGD_UCHAR*)cyphertext, cyphertextLen, (SGD_UCHAR*)plantext, plantextLen);
+        m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
+        m_sessionPool->ReturnSession(sessionHandle);
+        return result;
+    }
+    default:
+        return SDR_ALGNOTSUPPORT;
+    }
+}
+
+unsigned int SDFCryptoProvider::DecryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
+    unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
+    unsigned int* plantextLen)
+{
+    switch (algorithm)
+    {
+    case SM4_CBC:
+    {
+        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+        SGD_HANDLE keyHandler;
+        SGD_RV getSymmKeyResult = m_SDFApiWrapper->GetSymmKeyHandle(sessionHandle,
+                keyIndex, &keyHandler);
+        if (!getSymmKeyResult == SDR_OK)
+        {
+            m_sessionPool->ReturnSession(sessionHandle);
+            return getSymmKeyResult;
         }
         SGD_RV result =
             m_SDFApiWrapper->Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,

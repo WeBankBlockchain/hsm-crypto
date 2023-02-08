@@ -109,6 +109,13 @@ public:
     {
         return m_importKey(_sessionHandle, _key, _keyLength, _keyHandle);
     }
+
+    int GetSymmKeyHandle(
+        void* _sessionHandle, unsigned int _keyIndex, void** _keyHandle)
+    {
+        return m_getSymmKeyHandle(_sessionHandle, _keyIndex, _keyHandle);
+    }
+
     int DestroyKey(void* _sessionHandle, void* _keyHandle)
     {
         return m_destroyKey(_sessionHandle, _keyHandle);
@@ -160,6 +167,7 @@ private:
     int (*m_hashFinal)(void*, unsigned char*, unsigned int*);
 
     int (*m_importKey)(void*, unsigned char*, unsigned int, void**);
+    int (*m_getSymmKeyHandle)(void*, unsigned int, void**);
     int (*m_destroyKey)(void*, void*);
 
     int (*m_encrypt)(void*, void*, unsigned int, unsigned char*, unsigned char*, unsigned int,
@@ -241,12 +249,20 @@ public:
         unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
         unsigned int* cyphertextLen) override;
 
+    unsigned int EncryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
+        unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
+        unsigned int* cyphertextLen);
+
     /**
      * Decrypt
      */
     unsigned int Decrypt(Key const& key, AlgorithmType algorithm, unsigned char* iv,
         unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
         unsigned int* plantextLen) override;
+
+    unsigned int DecryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
+        unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
+        unsigned int* plantextLen);
 
     /**
      *  Get public key of an internal key
