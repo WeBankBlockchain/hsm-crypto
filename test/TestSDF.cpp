@@ -44,7 +44,7 @@ int main(int, const char* argv[])
               << std::endl;
     size_t sessionPoolRound = atoi(argv[1]);
     size_t loopRound = atoi(argv[2]);
-    const std::string libPath = "/usr/lib64/libgmt0018.so";
+    const std::string libPath = "/usr/local/lib/libgmt0018.so";
     try
     {
         SDFCryptoProvider& provider = SDFCryptoProvider::GetInstance(sessionPoolRound, libPath);
@@ -177,35 +177,62 @@ int main(int, const char* argv[])
     key.setSymmetricKey(pbKeyValue);
     unsigned int cypherLen;
     std::vector<byte> cypher(32);
-    unsigned int encryptCode = provider.Encrypt(
-        key, SM4_CBC, pbIV.data(), pbPlainText.data(), 32, cypher.data(), &cypherLen);
-    if (encryptCode != SDR_OK)
+    unsigned int symmKeyIndex = 8;
+
+    // unsigned int encryptCode = provider.Encrypt(
+    //     key, SM4_CBC, pbIV.data(), pbPlainText.data(), 32, cypher.data(), &cypherLen);
+    // if (encryptCode != SDR_OK)
+    // {
+    //     std::cout << "Failed!!" << std::endl;
+    //     std::cout << provider.GetErrorMessage(encryptCode) << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "Encrypt Result  : " << sdfToHex(cypher) << std::endl;
+    //     std::cout << "Standard Result : " << sdfToHex(pbCipherText) << std::endl;
+    // }
+
+    unsigned int encryptWithInternalKeyCode = provider.EncryptWithInternalKey(
+        symmKeyIndex, SM4_CBC, pbIV.data(), pbPlainText.data(), 32, cypher.data(), &cypherLen);
+    if (encryptWithInternalKeyCode != SDR_OK)
     {
-        std::cout << "Failed!!" << std::endl;
-        std::cout << provider.GetErrorMessage(encryptCode) << std::endl;
+        std::cout << "EncryptWithInternalKey Failed!!" << std::endl;
+        std::cout << provider.GetErrorMessage(encryptWithInternalKeyCode) << std::endl;
     }
     else
     {
-        std::cout << "Encrypt Result  : " << sdfToHex(cypher) << std::endl;
+        std::cout << "EncryptWithInternalKey Result  : " << sdfToHex(cypher) << std::endl;
         std::cout << "Standard Result : " << sdfToHex(pbCipherText) << std::endl;
     }
-
 
     std::cout << "*****SM4 Decrypt****" << std::endl;
     std::cout << "Cipher Text: " << sdfToHex(pbPlainText) << std::endl;
     std::cout << "IV         : " << sdfToHex(originIV) << std::endl;
     std::vector<byte> plain(32);
     unsigned int plainlen;
-    unsigned int decryptoCode = provider.Decrypt(
-        key, SM4_CBC, originIV.data(), pbCipherText.data(), 32, plain.data(), &plainlen);
+    // unsigned int decryptoCode = provider.Decrypt(
+    //     key, SM4_CBC, originIV.data(), pbCipherText.data(), 32, plain.data(), &plainlen);
+    // if (decryptoCode != SDR_OK)
+    // {
+    //     std::cout << "Failed!!" << std::endl;
+    //     std::cout << provider.GetErrorMessage(decryptoCode) << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "Decrypt Result  : " << sdfToHex(plain) << std::endl;
+    //     std::cout << "Standard Result : " << sdfToHex(pbPlainText) << std::endl;
+    // }
+
+    unsigned int decryptoCode = provider.DecryptWithInternalKey(
+        symmKeyIndex, SM4_CBC, originIV.data(), cypher.data(), 32, plain.data(), &plainlen);
     if (decryptoCode != SDR_OK)
     {
-        std::cout << "Failed!!" << std::endl;
+        std::cout << "DecryptWithInternalKey Failed!!" << std::endl;
         std::cout << provider.GetErrorMessage(decryptoCode) << std::endl;
     }
     else
     {
-        std::cout << "Decrypt Result  : " << sdfToHex(plain) << std::endl;
+        std::cout << "DecryptWithInternalKey Result  : " << sdfToHex(plain) << std::endl;
         std::cout << "Standard Result : " << sdfToHex(pbPlainText) << std::endl;
     }
 
