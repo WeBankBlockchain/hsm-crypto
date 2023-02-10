@@ -144,6 +144,7 @@ public:
 
 private:
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#include <windows.h>
     HMODULE m_handle;
 #else
     void* m_handle;
