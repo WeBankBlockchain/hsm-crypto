@@ -29,6 +29,11 @@
 #include <list>
 #include <string>
 #include <vector>
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#include <windows.h>
+#endif
+
 using namespace hsm;
 namespace hsm
 {
@@ -143,8 +148,8 @@ public:
 
 
 private:
+
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
     HMODULE m_handle;
 #else
     void* m_handle;

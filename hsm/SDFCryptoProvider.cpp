@@ -437,11 +437,11 @@ unsigned int SDFCryptoProvider::EncryptWithInternalKey(unsigned int keyIndex, Al
             m_sessionPool->ReturnSession(sessionHandle);
             return getSymmKeyResult;
         }
-        
+
         SGD_RV result =
             m_SDFApiWrapper->Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
                 (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*)cyphertext, cyphertextLen);
-        
+
         m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;

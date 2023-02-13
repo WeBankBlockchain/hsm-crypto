@@ -2,7 +2,7 @@
 
 name: HSM-CRYPTO GitHub Actions
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
@@ -28,3 +28,34 @@ jobs:
           mkdir build,
           cd build,
           cmake .. && make .
+  build_with_windows:
+    name: build_with_windows
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 5
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            /home/runner/.hunter
+            /github/home/.hunter
+            /Users/runner/.hunter
+            C:/.hunter/
+            ccache
+          key: hunter-msvc-v1-notest-${{ runner.temp }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+          restore-keys: |
+            hunter-msvc-v1-notest-${{ runner.temp }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+            hunter-msvc-v1-notest-${{ runner.temp }}-${{ github.base_ref }}-
+            hunter-msvc-v1-notest-${{ runner.temp }}-
+      - name: Add MSbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+      - name: configure
+        # run: mkdir -p build && cd build && cmake -G "Visual Studio 17 2022" -A x64 ..
+        run: mkdir -p build && cd build && cmake -G "Visual Studio 16 2019" -A x64 ..
+      - name: compile
+        run: cd build && MSBuild HSM-CRYPTO.sln /p:Configuration=Release /p:Platform=x64
