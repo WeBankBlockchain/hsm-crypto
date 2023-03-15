@@ -42,7 +42,7 @@ class SDFApiWrapper
 public:
     using Ptr = std::shared_ptr<SDFApiWrapper>;
     SDFApiWrapper(const std::string& libPath);
-    virtual ~SDFApiWrapper() {}
+    virtual ~SDFApiWrapper();
 
     int OpenSession(void* _deviceHandle, void* _sessionHandle)
     {
@@ -215,7 +215,7 @@ class SDFCryptoProvider : public CryptoProvider
 public:
     SDFCryptoProvider(const std::string& libPath);
     SDFCryptoProvider(int sessionPoolSize, const std::string& libPath);
-    ~SDFCryptoProvider();
+    virtual ~SDFCryptoProvider();
     SDFCryptoProvider(const SDFCryptoProvider&) = default;
     SDFCryptoProvider& operator=(const SDFCryptoProvider&) = default;
 
