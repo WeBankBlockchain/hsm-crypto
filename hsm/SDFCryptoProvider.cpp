@@ -447,21 +447,13 @@ unsigned int SDFCryptoProvider::EncryptWithInternalKey(unsigned int keyIndex, Al
 
         if (!getSymmKeyResult == SDR_OK)
         {
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] error" << std::endl;
-            m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] DestroyKey" << std::endl;
             m_sessionPool->ReturnSession(sessionHandle);
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] ReturnSession" << std::endl;
             return getSymmKeyResult;
         }
 
         SGD_RV result =
             m_SDFApiWrapper->Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
                 (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*)cyphertext, cyphertextLen);
-        if (!result == SDR_OK)
-        {
-             std::cout << "[EncryptWithInternalKey:Encrypt] error" << "sessionHandle: " << sessionHandle << ", keyHandler: " << keyHandler << std::endl;
-        }
         m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
@@ -514,20 +506,12 @@ unsigned int SDFCryptoProvider::DecryptWithInternalKey(unsigned int keyIndex, Al
                 keyIndex, &keyHandler);
         if (!getSymmKeyResult == SDR_OK)
         {
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] error" << std::endl;
-            m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] DestroyKey" << std::endl;
             m_sessionPool->ReturnSession(sessionHandle);
-            std::cout << "[DecryptWithInternalKey:GetSymmKeyHandle] ReturnSession" << std::endl;
             return getSymmKeyResult;
         }
         SGD_RV result =
             m_SDFApiWrapper->Decrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
                 (SGD_UCHAR*)cyphertext, cyphertextLen, (SGD_UCHAR*)plantext, plantextLen);
-        if (!result == SDR_OK)
-        {
-             std::cout << "[EncryptWithInternalKey:Decrypt] error" << "sessionHandle: " << sessionHandle << ", keyHandler: " << keyHandler << std::endl;
-        }
         m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
