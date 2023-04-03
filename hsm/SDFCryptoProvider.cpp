@@ -2,6 +2,7 @@
     #define dlopen(path, arg2) LoadLibrary(path)
     #define dlsym(handle, func) GetProcAddress(handle, func)
     #define dlerror() GetLastError()
+    #define dlclose(args) FreeLibrary(args)
 #else
     #include <dlfcn.h>
 #endif
@@ -85,6 +86,14 @@ SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
         (int (*)(void*, unsigned int, unsigned char*))dlsym(m_handle, "SDF_GenerateRandom");
 }
 
+SDFApiWrapper::~SDFApiWrapper()
+{
+    if (m_handle)
+    {
+        dlclose(m_handle);
+    }
+}
+
 SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
 {
     if (_size <= 0)
@@ -106,7 +115,7 @@ void* SessionPool::GetSession()
     if (sessionStatus != SDR_OK)
     {
         throw std::runtime_error(
-            "Cannot open session, error: " + getSdfErrorMessage(sessionStatus));
+            "Cannot open session, m_available_session_count: " + std::to_string(m_available_session_count));
     }
     m_available_session_count--;
     return sessionHandle;
@@ -115,8 +124,12 @@ void* SessionPool::GetSession()
 void SessionPool::ReturnSession(void* session)
 {
     std::unique_lock<std::mutex> l(mtx);
-    m_SDFApiWrapper->CloseSession(session);
-    int i = 1;
+    SGD_RV sessionStatus = m_SDFApiWrapper->CloseSession(session);
+    if (sessionStatus != SDR_OK)
+    {
+        throw std::runtime_error(
+            "Cannot close session, error: " + getSdfErrorMessage(sessionStatus));
+    }
     m_available_session_count++;
     cv.notify_all();
 }
@@ -441,7 +454,6 @@ unsigned int SDFCryptoProvider::EncryptWithInternalKey(unsigned int keyIndex, Al
         SGD_RV result =
             m_SDFApiWrapper->Encrypt(sessionHandle, keyHandler, SGD_SM4_CBC, (SGD_UCHAR*)iv,
                 (SGD_UCHAR*)plantext, plantextLen, (SGD_UCHAR*)cyphertext, cyphertextLen);
-
         m_SDFApiWrapper->DestroyKey(sessionHandle, keyHandler);
         m_sessionPool->ReturnSession(sessionHandle);
         return result;
