@@ -243,8 +243,8 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
     {
     case SM2:
     {
-        ECCrefPublicKey pk;
-        ECCrefPrivateKey sk;
+        ECCrefPublicKey pk = {0};
+        ECCrefPrivateKey sk = {0};
         SGD_UINT32 keyLen = SM2_BITS;
 
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
@@ -412,7 +412,7 @@ unsigned int SDFCryptoProvider::Encrypt(Key const& key, AlgorithmType algorithm,
     case SM4_CBC:
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_HANDLE keyHandler;
+        SGD_HANDLE keyHandler = NULL;
         SGD_RV importResult = m_SDFApiWrapper->ImportKey(sessionHandle,
             (SGD_UCHAR*)key.symmetrickey()->data(), key.symmetrickey()->size(), &keyHandler);
         if (!importResult == SDR_OK)
@@ -441,7 +441,7 @@ unsigned int SDFCryptoProvider::EncryptWithInternalKey(unsigned int keyIndex, Al
     case SM4_CBC:
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_HANDLE keyHandler;
+        SGD_HANDLE keyHandler = NULL;
         SGD_RV getSymmKeyResult = m_SDFApiWrapper->GetSymmKeyHandle(sessionHandle,
                 keyIndex, &keyHandler);
 
@@ -472,7 +472,7 @@ unsigned int SDFCryptoProvider::Decrypt(Key const& key, AlgorithmType algorithm,
     case SM4_CBC:
     {
         SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_HANDLE keyHandler;
+        SGD_HANDLE keyHandler = NULL;
         SGD_RV importResult = m_SDFApiWrapper->ImportKey(sessionHandle,
             (SGD_UCHAR*)key.symmetrickey()->data(), key.symmetrickey()->size(), &keyHandler);
         if (!importResult == SDR_OK)
