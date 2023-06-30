@@ -115,8 +115,7 @@ public:
         return m_importKey(_sessionHandle, _key, _keyLength, _keyHandle);
     }
 
-    int GetSymmKeyHandle(
-        void* _sessionHandle, unsigned int _keyIndex, void** _keyHandle)
+    int GetSymmKeyHandle(void* _sessionHandle, unsigned int _keyIndex, void** _keyHandle)
     {
         return m_getSymmKeyHandle(_sessionHandle, _keyIndex, _keyHandle);
     }
@@ -148,7 +147,6 @@ public:
 
 
 private:
-
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     HMODULE m_handle;
 #else
@@ -260,9 +258,9 @@ public:
         unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
         unsigned int* cyphertextLen) override;
 
-    unsigned int EncryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
-        unsigned char const* plantext, unsigned int plantextLen, unsigned char* cyphertext,
-        unsigned int* cyphertextLen);
+    unsigned int EncryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm,
+        unsigned char* iv, unsigned char const* plantext, unsigned int plantextLen,
+        unsigned char* cyphertext, unsigned int* cyphertextLen);
 
     /**
      * Decrypt
@@ -271,9 +269,9 @@ public:
         unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
         unsigned int* plantextLen) override;
 
-    unsigned int DecryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm, unsigned char* iv,
-        unsigned char const* cyphertext, unsigned int cyphertextLen, unsigned char* plantext,
-        unsigned int* plantextLen);
+    unsigned int DecryptWithInternalKey(unsigned int keyIndex, AlgorithmType algorithm,
+        unsigned char* iv, unsigned char const* cyphertext, unsigned int cyphertextLen,
+        unsigned char* plantext, unsigned int* plantextLen);
 
     /**
      *  Get public key of an internal key

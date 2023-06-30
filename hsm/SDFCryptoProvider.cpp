@@ -93,6 +93,7 @@ SDFApiWrapper::~SDFApiWrapper()
     if (m_handle)
     {
         dlclose(m_handle);
+        m_handle = NULL;
     }
 }
 
