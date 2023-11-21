@@ -11,6 +11,7 @@ macro(add_option O DEF)
 endmacro()
 
 add_option(BUILD_SHARED_LIBS OFF)
+add_option(TESTS OFF)
 EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -24,6 +25,7 @@ message("-- CMake              Cmake version and location   ${CMAKE_VERSION} (${
 message("-- Compiler           C++ compiler version         ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message("-- TARGET_PLATFORM    Target platform              ${CMAKE_SYSTEM_NAME} ${ARCHITECTURE}")
 message("-- BUILD_SHARED_LIBS  Build shard lib              ${BUILD_SHARED_LIBS}")
+message("-- TESTS              Build Tests                  ${TESTS}")
 message("------------------------------------------------------------------------")
 message("")
 endmacro()

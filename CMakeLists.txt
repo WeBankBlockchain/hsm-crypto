@@ -13,7 +13,7 @@ print_config(${PROJECT_NAME})
 include(ProjectSDF)
 add_subdirectory(hsm)
 
-if(BUILD_SHARED_LIBS)
+if(TESTS)
     add_subdirectory(test)
 endif()
 
