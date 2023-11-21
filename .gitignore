@@ -4,3 +4,4 @@ swig/
 update.sh
 build/
 deps/
+.idea
