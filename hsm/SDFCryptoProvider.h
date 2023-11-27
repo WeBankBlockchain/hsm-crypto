@@ -32,6 +32,7 @@
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
+#define _WIN32_WINNT 0x0601
 #endif
 
 using namespace hsm;
