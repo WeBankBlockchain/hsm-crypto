@@ -88,64 +88,61 @@ SDFApiWrapper::SDFApiWrapper(const std::string& libPath)
         (int (*)(void*, unsigned int, unsigned char*))dlsym(m_handle, "SDF_GenerateRandom");
 }
 
-SDFApiWrapper::~SDFApiWrapper()
-{
-    if (m_handle)
-    {
-        dlclose(m_handle);
-        m_handle = NULL;
+    SDFApiWrapper::~SDFApiWrapper() {
+        if (m_handle) {
+            dlclose(m_handle);
+            m_handle = NULL;
+        }
     }
-}
 
-SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
-{
-    if (_size <= 0)
-    {
-        throw std::runtime_error("HSM device session pool size should be bigger than 0");
-    }
-    m_size = _size;
-    m_deviceHandle = _deviceHandle;
-    m_available_session_count = _size;
-    m_SDFApiWrapper = _sdfApiWrapper;
-}
+//SessionPool::SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
+//{
+//    if (_size <= 0)
+//    {
+//        throw std::runtime_error("HSM device session pool size should be bigger than 0");
+//    }
+//    m_size = _size;
+//    m_deviceHandle = _deviceHandle;
+//    m_available_session_count = _size;
+//    m_SDFApiWrapper = _sdfApiWrapper;
+//}
+//
+//void* SessionPool::GetSession()
+//{
+//    std::unique_lock<std::mutex> l(mtx);
+//    cv.wait(l, [this]() -> bool { return !m_available_session_count == 0; });
+//    SGD_HANDLE sessionHandle;
+//    SGD_RV sessionStatus = m_SDFApiWrapper->OpenSession(m_deviceHandle, &sessionHandle);
+//    if (sessionStatus != SDR_OK)
+//    {
+//        throw std::runtime_error("Cannot open session, m_available_session_count: " +
+//                                 std::to_string(m_available_session_count));
+//    }
+//    m_available_session_count--;
+//    return sessionHandle;
+//}
+//
+//void SessionPool::ReturnSession(void* session)
+//{
+//    std::unique_lock<std::mutex> l(mtx);
+//    SGD_RV sessionStatus = m_SDFApiWrapper->CloseSession(session);
+//    if (sessionStatus != SDR_OK)
+//    {
+//        throw std::runtime_error(
+//            "Cannot close session, error: " + getSdfErrorMessage(sessionStatus));
+//    }
+//    m_available_session_count++;
+//    cv.notify_all();
+//}
 
-void* SessionPool::GetSession()
-{
-    std::unique_lock<std::mutex> l(mtx);
-    cv.wait(l, [this]() -> bool { return !m_available_session_count == 0; });
-    SGD_HANDLE sessionHandle;
-    SGD_RV sessionStatus = m_SDFApiWrapper->OpenSession(m_deviceHandle, &sessionHandle);
-    if (sessionStatus != SDR_OK)
-    {
-        throw std::runtime_error("Cannot open session, m_available_session_count: " +
-                                 std::to_string(m_available_session_count));
-    }
-    m_available_session_count--;
-    return sessionHandle;
-}
+    const unsigned int SDFCryptoProvider::SM2_BITS = 256;
+    const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
 
-void SessionPool::ReturnSession(void* session)
-{
-    std::unique_lock<std::mutex> l(mtx);
-    SGD_RV sessionStatus = m_SDFApiWrapper->CloseSession(session);
-    if (sessionStatus != SDR_OK)
-    {
-        throw std::runtime_error(
-            "Cannot close session, error: " + getSdfErrorMessage(sessionStatus));
-    }
-    m_available_session_count++;
-    cv.notify_all();
-}
-
-const unsigned int SDFCryptoProvider::SM2_BITS = 256;
-const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
-SDFCryptoProvider::SDFCryptoProvider(const std::string& libPath)
-{
-    m_libPath = libPath;
-    m_SDFApiWrapper = std::make_shared<SDFApiWrapper>(m_libPath);
-    SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
-    if (deviceStatus != SDR_OK)
-    {
+    SDFCryptoProvider::SDFCryptoProvider(const std::string &libPath) {
+        m_libPath = libPath;
+        m_SDFApiWrapper = std::make_shared<SDFApiWrapper>(m_libPath);
+        SGD_RV deviceStatus = m_SDFApiWrapper->OpenDevice(&m_deviceHandle);
+        if (deviceStatus != SDR_OK) {
         throw std::runtime_error("Cannot open device, error: " + getSdfErrorMessage(deviceStatus));
     }
     m_sessionPool = std::make_shared<SessionPool>(50, m_deviceHandle, m_SDFApiWrapper);
@@ -264,117 +261,104 @@ unsigned int SDFCryptoProvider::KeyGen(AlgorithmType algorithm, Key* key)
         std::shared_ptr<std::vector<byte>> pubKey = std::make_shared<std::vector<byte>>();
         pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x + 32, (byte*)pk.x + 64);
-        pubKey->insert(pubKey->end(), (byte*)pk.y + 32, (byte*)pk.y + 64);
+        pubKey->insert(pubKey->end(), (byte *) pk.y + 32, (byte *) pk.y + 64);
         key->setPrivateKey(privKey);
         key->setPublicKey(pubKey);
         m_sessionPool->ReturnSession(sessionHandle);
         return SDR_OK;
     }
-    default:
-        return SDR_ALGNOTSUPPORT;
+        default:
+            return SDR_ALGNOTSUPPORT;
     }
 }
 
-unsigned int SDFCryptoProvider::Hash(Key* key, AlgorithmType algorithm,
-    unsigned char const* message, unsigned int messageLen, unsigned char* digest,
-    unsigned int* digestLen)
-{
-    switch (algorithm)
-    {
-    case SM3:
-    {
-        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV code;
-        if (key == nullptr)
-        {
-            code = m_SDFApiWrapper->HashInit(sessionHandle, SGD_SM3, NULL, NULL, 0);
+    unsigned int SDFCryptoProvider::Hash(Key *key, AlgorithmType algorithm,
+                                         unsigned char const *message, unsigned int messageLen,
+                                         unsigned char *digest, unsigned int *digestLen) {
+        if (algorithm != SM3) {
+            return SDR_ALGNOTSUPPORT; // 只支持 SM3 算法
         }
-        else
-        {
-            ECCrefPublicKey eccKey;
+
+        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+        if (sessionHandle == nullptr) {
+            return SWR_DEVICE_STATUS_ERR; // 会话获取失败
+        }
+
+        SGD_RV code;
+        ECCrefPublicKey eccKey;
+        if (key != nullptr) {
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x + 32, key->publicKey()->data(), 32);
             memcpy(eccKey.y + 32, key->publicKey()->data() + 32, 32);
-            code = m_SDFApiWrapper->HashInit(
-                sessionHandle, SGD_SM3, &eccKey, (unsigned char*)SM2_USER_ID.c_str(), 16);
-        }
-        if (code != SDR_OK)
-        {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
+            code = m_SDFApiWrapper->HashInit(sessionHandle, SGD_SM3, &eccKey,
+                                             (unsigned char *) SM2_USER_ID.c_str(), 16);
+        } else {
+            code = m_SDFApiWrapper->HashInit(sessionHandle, SGD_SM3, nullptr, nullptr, 0);
         }
 
-        code = m_SDFApiWrapper->HashUpdate(sessionHandle, (SGD_UCHAR*)message, messageLen);
-        if (code != SDR_OK)
-        {
+        if (code != SDR_OK) {
             m_sessionPool->ReturnSession(sessionHandle);
-            return code;
+            return code; // 返回错误代码
+        }
+
+        code = m_SDFApiWrapper->HashUpdate(sessionHandle, (SGD_UCHAR *) message, messageLen);
+        if (code != SDR_OK) {
+            m_sessionPool->ReturnSession(sessionHandle);
+            return code; // 返回错误代码
         }
 
         code = m_SDFApiWrapper->HashFinal(sessionHandle, digest, digestLen);
+        m_sessionPool->ReturnSession(sessionHandle); // 确保会话释放
 
-        if (code != SDR_OK)
-        {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return code;
-        }
-        m_sessionPool->ReturnSession(sessionHandle);
-        return code;
+        return code; // 返回最终结果
     }
-    default:
-        return SDR_ALGNOTSUPPORT;
-    }
-}
 
-unsigned int SDFCryptoProvider::Verify(Key const& key, AlgorithmType algorithm,
-    unsigned char const* digest, unsigned int digestLen, unsigned char const* signature,
-    const unsigned int signatureLen, bool* result)
-{
-    switch (algorithm)
-    {
-    case SM2:
-    {
-        if (signatureLen != 64)
-        {
-            return SDR_NOTSUPPORT;
+    unsigned int SDFCryptoProvider::Verify(Key const &key, AlgorithmType algorithm,
+                                           unsigned char const *digest, unsigned int digestLen,
+                                           unsigned char const *signature,
+                                           const unsigned int signatureLen, bool *result) {
+        if (algorithm != SM2) {
+            return SDR_NOTSUPPORT; // 只支持 SM2 算法
         }
 
-        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+        if (signatureLen != 64) {
+            return SDR_NOTSUPPORT; // 校验签名长度
+        }
+
+        SGD_HANDLE sessionHandle = nullptr;
+
+        // 尝试获取会话
+        sessionHandle = m_sessionPool->GetSession();
+
         ECCSignature eccSignature;
         memcpy(eccSignature.r + 32, signature, 32);
         memcpy(eccSignature.s + 32, signature + 32, 32);
         SGD_RV code;
 
-        if (key.isInternalKey())
-        {
+        // 根据密钥类型选择验证方式
+        if (key.isInternalKey()) {
             code = m_SDFApiWrapper->InternalVerifyECC(
-                sessionHandle, key.identifier(), (SGD_UCHAR*)digest, digestLen, &eccSignature);
-        }
-        else
-        {
+                    sessionHandle, key.identifier(), (SGD_UCHAR *) digest, digestLen, &eccSignature);
+        } else {
             ECCrefPublicKey eccKey;
             eccKey.bits = SM2_BITS;
             memcpy(eccKey.x + 32, key.publicKey()->data(), 32);
             memcpy(eccKey.y + 32, key.publicKey()->data() + 32, 32);
             code = m_SDFApiWrapper->ExternalVerifyECC(
-                sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR*)digest, digestLen, &eccSignature);
+                    sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR *) digest, digestLen, &eccSignature);
         }
-        if (code == SDR_OK)
-        {
-            *result = true;
-        }
-        else
-        {
-            *result = false;
-        }
+
+        // 释放会话
         m_sessionPool->ReturnSession(sessionHandle);
-        return code;
+        if (code != SDR_OK) {
+            return code; // 返回错误代码
+        }
+
+        *result = (code == SDR_OK); // 设置结果
+        return SDR_OK; // 成功
     }
-    default:
-        return SDR_ALGNOTSUPPORT;
-    }
-}
-unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key& key, AlgorithmType algorithm)
+
+    unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key& key, AlgorithmType algorithm)
 {
     switch (algorithm)
     {
