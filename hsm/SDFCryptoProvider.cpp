@@ -272,47 +272,45 @@ unsigned int SDFCryptoProvider::Hash(Key *key, AlgorithmType algorithm,
     return code;
 }
 
-    unsigned int SDFCryptoProvider::Verify(Key const &key, AlgorithmType algorithm,
-                                           unsigned char const *digest, unsigned int digestLen,
-                                           unsigned char const *signature, const unsigned int signatureLen,
-                                           bool *result) {
-        if (algorithm != SM2) {
-            return SDR_NOTSUPPORT;
-        }
-
-        if (signatureLen != 64) {
-            return SDR_NOTSUPPORT;
-        }
-
-        SGD_HANDLE sessionHandle = nullptr;
-
-        sessionHandle = m_sessionPool->GetSession();
-
-        ECCSignature eccSignature;
-        memcpy(eccSignature.r + 32, signature, 32);
-        memcpy(eccSignature.s + 32, signature + 32, 32);
-        SGD_RV code;
-
-        if (key.isInternalKey()) {
-            code = m_SDFApiWrapper->InternalVerifyECC(
-                    sessionHandle, key.identifier(), (SGD_UCHAR *) digest, digestLen, &eccSignature);
-        } else {
-            ECCrefPublicKey eccKey;
-            eccKey.bits = SM2_BITS;
-            memcpy(eccKey.x + 32, key.publicKey()->data(), 32);
-            memcpy(eccKey.y + 32, key.publicKey()->data() + 32, 32);
-            code = m_SDFApiWrapper->ExternalVerifyECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR *) digest,
-                                                      digestLen, &eccSignature);
-        }
-
-        m_sessionPool->ReturnSession(sessionHandle);
-        if (code != SDR_OK) {
-            return code;
-        }
-
-        *result = (code == SDR_OK);
-        return SDR_OK;
+unsigned int SDFCryptoProvider::Verify(Key const &key, AlgorithmType algorithm,
+                                       unsigned char const *digest, unsigned int digestLen,
+                                       unsigned char const *signature, const unsigned int signatureLen, bool *result) {
+    if (algorithm != SM2) {
+        return SDR_NOTSUPPORT;
     }
+
+    if (signatureLen != 64) {
+        return SDR_NOTSUPPORT;
+    }
+
+    SGD_HANDLE sessionHandle = nullptr;
+    sessionHandle = m_sessionPool->GetSession();
+
+    ECCSignature eccSignature;
+    memcpy(eccSignature.r + 32, signature, 32);
+    memcpy(eccSignature.s + 32, signature + 32, 32);
+    SGD_RV code;
+
+    if (key.isInternalKey()) {
+        code = m_SDFApiWrapper->InternalVerifyECC(
+                sessionHandle, key.identifier(), (SGD_UCHAR *) digest, digestLen, &eccSignature);
+    } else {
+        ECCrefPublicKey eccKey;
+        eccKey.bits = SM2_BITS;
+        memcpy(eccKey.x + 32, key.publicKey()->data(), 32);
+        memcpy(eccKey.y + 32, key.publicKey()->data() + 32, 32);
+        code = m_SDFApiWrapper->ExternalVerifyECC(sessionHandle, SGD_SM2_1, &eccKey, (SGD_UCHAR *) digest, digestLen,
+                                                  &eccSignature);
+    }
+
+    m_sessionPool->ReturnSession(sessionHandle);
+    if (code != SDR_OK) {
+        return code;
+    }
+
+    *result = (code == SDR_OK);
+    return SDR_OK;
+}
 
     unsigned int SDFCryptoProvider::ExportInternalPublicKey(Key &key, AlgorithmType algorithm) {
         switch (algorithm) {
@@ -321,16 +319,15 @@ unsigned int SDFCryptoProvider::Hash(Key *key, AlgorithmType algorithm,
                     return SDR_ALGNOTSUPPORT;
                 }
                 ECCrefPublicKey pk;
-        SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
-        SGD_RV result =
-            m_SDFApiWrapper->ExportSignPublicKeyECC(sessionHandle, key.identifier(), &pk);
-        if (result != SDR_OK)
-        {
-            m_sessionPool->ReturnSession(sessionHandle);
-            return result;
-        }
-        std::shared_ptr<std::vector<byte>> pubKey = std::make_shared<std::vector<byte>>();
-        pubKey->reserve(32 + 32);
+                SGD_HANDLE sessionHandle = m_sessionPool->GetSession();
+                SGD_RV result =
+                        m_SDFApiWrapper->ExportSignPublicKeyECC(sessionHandle, key.identifier(), &pk);
+                if (result != SDR_OK) {
+                    m_sessionPool->ReturnSession(sessionHandle);
+                    return result;
+                }
+                std::shared_ptr<std::vector<byte>> pubKey = std::make_shared<std::vector<byte>>();
+                pubKey->reserve(32 + 32);
         pubKey->insert(pubKey->end(), (byte*)pk.x + 32, (byte*)pk.x + 64);
         pubKey->insert(pubKey->end(), (byte*)pk.y + 32, (byte*)pk.y + 64);
         key.setPublicKey(pubKey);
