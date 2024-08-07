@@ -189,46 +189,20 @@ private:
     int (*m_generateRandom)(void*, unsigned int, unsigned char*);
 };
 
-class SessionPool {
+class SessionPool
+{
 public:
     using Ptr = std::shared_ptr<SessionPool>;
-
-    SessionPool(int _size, void *_deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
-            : m_size(_size), m_deviceHandle(_deviceHandle), m_SDFApiWrapper(_sdfApiWrapper) {
-        for (int i = 0; i < _size; ++i) {
-            SGD_HANDLE sessionHandle;
-            if (m_SDFApiWrapper->OpenSession(_deviceHandle, &sessionHandle) == SDR_OK) {
-                m_sessions.push(sessionHandle);
-            }
-        }
-        m_available_session_count = _size;
-    }
-
-    void *GetSession() {
-        std::unique_lock<std::mutex> l(mtx);
-        cv.wait(l, [this]() { return !m_sessions.empty(); });
-
-        SGD_HANDLE sessionHandle = m_sessions.front();
-        m_sessions.pop();
-        m_available_session_count--;
-        return sessionHandle;
-    }
-
-    void ReturnSession(void *session) {
-        {
-            std::unique_lock<std::mutex> l(mtx);
-            m_sessions.push(static_cast<SGD_HANDLE>(session));
-            m_available_session_count++;
-        }
-        cv.notify_one(); // 通知一个等待的线程
-    }
+    SessionPool(size_t _size, void *_deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper);
+    void *GetSession();
+    void ReturnSession(void *session);
 
 private:
-    int m_size;
+    size_t m_size;
     void *m_deviceHandle;
     SDFApiWrapper::Ptr m_SDFApiWrapper;
     std::queue<SGD_HANDLE> m_sessions;
-    int m_available_session_count;
+    size_t m_available_session_count;
     std::mutex mtx;
     std::condition_variable cv;
 };

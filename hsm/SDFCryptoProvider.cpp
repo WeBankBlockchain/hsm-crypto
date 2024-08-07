@@ -95,6 +95,40 @@ SDFApiWrapper::~SDFApiWrapper() {
     }
 }
 
+SessionPool::SessionPool(size_t _size, void *_deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper)
+: m_size(_size), m_deviceHandle(_deviceHandle), m_SDFApiWrapper(_sdfApiWrapper)
+{
+    for (size_t i = 0; i < _size; ++i)
+    {
+        SGD_HANDLE sessionHandle;
+        if (m_SDFApiWrapper->OpenSession(_deviceHandle, &sessionHandle) == SDR_OK)
+        {
+            m_sessions.push(sessionHandle);
+        }
+    }
+    m_available_session_count = _size;
+}
+
+void* SessionPool::GetSession()
+{
+    std::unique_lock<std::mutex> l(mtx);
+    cv.wait(l, [this]() { return !m_sessions.empty(); });
+    SGD_HANDLE sessionHandle = m_sessions.front();
+    m_sessions.pop();
+    m_available_session_count--;
+    return sessionHandle;
+}
+
+void SessionPool::ReturnSession(void *session)
+{
+    {
+        std::unique_lock<std::mutex> l(mtx);
+        m_sessions.push(static_cast<SGD_HANDLE>(session));
+        m_available_session_count++;
+    }
+    cv.notify_one(); // 通知一个等待的线程
+}
+
 const unsigned int SDFCryptoProvider::SM2_BITS = 256;
 const std::string SDFCryptoProvider::SM2_USER_ID = "1234567812345678";
 
