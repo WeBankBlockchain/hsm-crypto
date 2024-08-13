@@ -29,6 +29,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <queue>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -192,15 +193,16 @@ class SessionPool
 {
 public:
     using Ptr = std::shared_ptr<SessionPool>;
-    SessionPool(int _size, void* _deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper);
-    void* GetSession();
-    void ReturnSession(void* session);
+    SessionPool(size_t _size, void *_deviceHandle, SDFApiWrapper::Ptr _sdfApiWrapper);
+    void *GetSession();
+    void ReturnSession(void *session);
 
 private:
-    void* m_deviceHandle;
     size_t m_size;
-    size_t m_available_session_count;
+    void *m_deviceHandle;
     SDFApiWrapper::Ptr m_SDFApiWrapper;
+    std::queue<SGD_HANDLE> m_sessions;
+    size_t m_available_session_count;
     std::mutex mtx;
     std::condition_variable cv;
 };
